@@ -5,21 +5,26 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.lrs.common.constant.Const;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
 import com.lrs.common.utils.PathsUtils;
 import com.lrs.common.utils.Ping;
 import com.lrs.common.utils.date.DateUtil;
 import com.lrs.core.admin.entity.User;
+import com.lrs.core.common.email.service.MailService;
+import com.lrs.core.monitor.entity.EmailAddress;
 import com.lrs.core.monitor.entity.Server;
 import com.lrs.core.monitor.mapper.ServerMapper;
+import com.lrs.core.monitor.service.IEmailAddressService;
+import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.core.monitor.service.IServerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,6 +36,7 @@ import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 
@@ -48,6 +54,21 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
 
     @Autowired
     private RedisTemplate<String,Object> redisTemplate;
+
+    @Autowired
+    private TemplateEngine templateEngine;
+
+    @Autowired
+    private MailService mailService;
+
+    @Autowired
+    private IEmailAddressService emailAddressService;
+
+    @Autowired
+    private IEmailSendDetailService emailSendDetailService;
+
+    @Autowired
+    private Executor executor;
 
     @Override
     public Result getList(PageDTO dto) throws Exception {
@@ -73,6 +94,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     @Override
     public Result add(Server item, User user) throws Exception {
         if(item.getCreateTime() == null){
+            item.setStatus(0);
             item.setCreateBy(user.getUserId());
             item.setCreateTime(LocalDateTime.now());
         }
@@ -150,16 +172,16 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
 //        response.addHeader("Content-Disposition", "attachment;filename=\""+ fileName + ".xls\"");// 点击导出excle按钮时候页面显示的默认名称
     }
 
-    @Override
+    @Transactional
     public void monitor() throws Exception {
-        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getIsDel, Const.NO));
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>());
         for(Server server:serverList){
             Long lastSecond = server.getLastSecond();
             long nextTimeMillis = lastSecond+(server.getMonitorSecond()*1000);
             if(nextTimeMillis < System.currentTimeMillis()){
                 Ping.savePingLogger(server.getIp(),"logs/monitor/"+ DateUtil.getDays()+"_"+server.getIp()+".log",server.getSendCount(),30);
                 server.setLastSecond(nextTimeMillis);
-                if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),30)){
+                if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),5)){
                     System.out.println("=date:"+LocalDateTime.now()+"ip:"+server.getIp()+" is unline");
                     server.setStatus(2);
                 }else{
@@ -174,7 +196,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     public Result listener() throws Exception {
         //有几台有问题
         String redisKey = "serverip_";
-        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getIsDel, Const.NO).eq(Server::getStatus,2));
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getStatus,2));
         List<Server> resultList = new ArrayList<>();
         if(serverList == null){
             serverList = new ArrayList<>();
@@ -182,12 +204,36 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             for(Server server:serverList){
                 String value = (String) redisTemplate.opsForValue().get(redisKey+server.getIp());
                 if(StringUtils.isEmpty(value)){
-                    redisTemplate.opsForValue().set(redisKey+server.getIp(),"1",3, TimeUnit.MINUTES);
-                    resultList.add(server);
+                    redisTemplate.opsForValue().set(redisKey+server.getIp(),"1",5, TimeUnit.MINUTES);
+                    if(server.getIsOpenSound().equals(1)){
+                        resultList.add(server);
+                    }
                 }
             }
         }
 
         return Result.ok(resultList);
+    }
+
+    public void sendEmail(){
+        //创建邮件正文
+        Context context = new Context();
+        context.setVariable("id", "168");
+        String emailContent = templateEngine.process("emailTemplate", context);
+        String from = "";
+        List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
+        if(emailAddressList != null && emailAddressList.size() > 0){
+            for (EmailAddress emailAddress:emailAddressList){
+                Runnable sendEmailRunable = new Runnable() {
+                    @Override
+                    public void run() {
+
+                    }
+                };
+                executor.execute(sendEmailRunable);
+            }
+        }
+
+        mailService.sendHtmlMail(from,"1071426959@qq.com","服务器检测掉线警告",emailContent);
     }
 }

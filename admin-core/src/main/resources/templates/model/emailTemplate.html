@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>服务器掉线警告</title>
+    </head>
+    <body>
+        <p>您好管理员,服务器IP：</p>
+        <ul th:each="item,mStat:${ipList}">
+            <li><h3 th:text="item">127.0.0.1</h3></li>
+        </ul>
+    <p>检测到服务掉线，请处理</p>
+
+    </body>
+</html>

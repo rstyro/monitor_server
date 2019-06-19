@@ -27,10 +27,10 @@ public class PageController {
 	public String include(Model model,@PathVariable("pageName") String pageName){
 		System.out.println("/include/"+pageName);
 		if(pageName.equalsIgnoreCase("main")){
-			List<Server> serverList = serverService.list(new LambdaQueryWrapper<Server>().eq(Server::getIsDel, 0).orderByDesc(Server::getStatus).orderByDesc(Server::getCreateTime));
-            int normalCount = serverService.count(new LambdaQueryWrapper<Server>().eq(Server::getIsDel, 0).eq(Server::getStatus,1));
-            int unLineCount = serverService.count(new LambdaQueryWrapper<Server>().eq(Server::getIsDel, 0).eq(Server::getStatus,2));
-            int sendMailCount = emailSendDetailService.count(new LambdaQueryWrapper<EmailSendDetail>().eq(EmailSendDetail::getIsDel,0));
+			List<Server> serverList = serverService.list(new LambdaQueryWrapper<Server>().orderByDesc(Server::getStatus).orderByDesc(Server::getCreateTime));
+            int normalCount = serverService.count(new LambdaQueryWrapper<Server>().eq(Server::getStatus,1));
+            int unLineCount = serverService.count(new LambdaQueryWrapper<Server>().eq(Server::getStatus,2));
+            int sendMailCount = emailSendDetailService.count(new LambdaQueryWrapper<EmailSendDetail>());
             model.addAttribute("normalCount", normalCount);
             model.addAttribute("unLineCount", unLineCount);
             model.addAttribute("sendMailCount", sendMailCount);
