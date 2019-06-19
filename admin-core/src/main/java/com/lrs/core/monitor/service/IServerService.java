@@ -26,4 +26,5 @@ public interface IServerService extends IService<Server> {
     public void downloadLogger(Long id, HttpServletRequest request,HttpServletResponse response) throws  Exception;
 
     public void monitor() throws Exception;
+    public Result listener() throws Exception;
 }

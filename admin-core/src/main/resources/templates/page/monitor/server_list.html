@@ -82,7 +82,6 @@
                         <span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>
                         <span data-toggle="tooltip" data-placement="right" title="删除" th:if="${QX.del == '1' }" class="btn btn-xs btn-danger"  th:data-id="${item.id }" th:onclick="del(this.getAttribute('data-id'));"><i class="fa fa-trash-o"></i></span>
                         <span data-toggle="tooltip" data-placement="left" title="下载今天的日志" th:if="${QX.query == '1' }" class="btn btn-xs btn-success"  th:data-id="${item.id }" ><a th:href="@{/monitor/server/downloadLogger(id=${item.id})}" style="color: #fff;"><i class="fa fa-download"></i></a></span>
-                        <span data-toggle="tooltip" data-placement="left" title="警告" th:if="${QX.query == '1' }" class="btn btn-xs btn-warning"  th:data-ip="${item.ip }"  th:onclick="bell(this.getAttribute('data-ip'));" ><i class="fa fa-bell"></i></span>
                     </td>
                 </tr>
                 <tr th:unless="${QX.query == '1' }" >
@@ -215,12 +214,7 @@
 <script th:src="@{/static/js/common.js}"></script>
 <script th:src="@{/static/page/src/kkpager.js}"></script>
 <script th:inline="javascript">
-    var isShow=false;
-    // setInterval(function () {
-    //     console.log("date",new Date().getTime());
-    //     waring();
-    // },10*1000);
-    //init
+
     $(function(){
 
         //提示框
@@ -258,12 +252,13 @@
             var sendCount = $("#sendCount").val();
             var lostCount = $("#lostCount").val();
             var isOpenSound = $("#isOpenSound").val();
+            console.log("isOpenSound:",isOpenSound);
             var monitorSecond = $("#monitorSecond").val();
             var createBy = $("#createBy").val();
             var createTime = $("#createTime").val();
             var modifyBy = $("#modifyBy").val();
             var modifyTime = $("#modifyTime").val();
-            if(checkData(serverName,ip,mark,isDel,lostCount,isOpenSound,monitorSecond,createBy,createTime,modifyBy,modifyTime)){
+            if(checkData(serverName,ip,mark,isDel,sendCount,lostCount,isOpenSound,monitorSecond,createBy,createTime,modifyBy,modifyTime)){
                 $.ajax({
                     type:"POST",
                     url:_ctx+url,
@@ -287,18 +282,22 @@
             skipPage(1);
         })
 
-        $('#warningModal').on('hide.bs.modal',
-            function() {
-            console.log("关闭模态框");
+        //模态框隐藏时回调
+        $('#warningModal').on('hide.bs.modal', function() {
                 // ap1.toggle();
                 ap1.pause()
-            })
+            });
+        //模态框显示时回调
+        $('#warningModal').on('show.bs.modal', function () {
+            ap1.play();
+        })
     });
     var listUrl = "/monitor/server/list";
     var editUrl = "/monitor/server/edit";
     var addUrl = "/monitor/server/add";
     var delUrl = "/monitor/server/del";
     var queryUrl = "/monitor/server/query";
+    var listenerUrl = "/monitor/server/listener";
 
     //跳转页面
     function  skipPage(pageNo) {
@@ -313,7 +312,7 @@
         $("input[name='actionurl']").val(addUrl);
         $("#modelHead").text("新增");
         $("#submitBtn").text("新增");
-        setData("","","","","","",0,"","","","","");
+        setData("","","","","","","10","10",0,"","","","","","");
         $("#itemModal").modal("show");
     }
     /**
@@ -376,6 +375,7 @@
                 $("input[name='lostCount']").focus();
                 return false;
              }
+             console.log("isOpenSound=",isOpenSound);
             if(isOpenSound == ""){
                 alert("是否开启声音不能为空");
                 $("input[name='isOpenSound']").focus();
@@ -410,21 +410,43 @@
          $("#modifyTime").val(modifyTime);
     }
 
-    function bell(ip) {
-        console.log("bell:",ip);
-        waring(ip);
+    //显示报警
+    function showBell(ip) {
+        $("#warningIp").text(ip);
+        $("#warningModal").modal("show");
     }
 
-    function waring(ip) {
-        isShow = !isShow;
-        console.log("isshow:",isShow)
-        if(isShow){
-            $("#warningIp").text(ip);
-            $("#warningModal").modal("show")
-        }else{
-            $("#warningModal").modal("hide")
-        }
+    //隐藏警报
+    function hideBell() {
+        $("#warningModal").modal("hide");
     }
+
+    // 获取失败服务器
+    function getFailedServer(){
+        $.get(_ctx+listenerUrl,{t:new Date().getTime()},function(data){
+            if(data.status == "200"){
+                var arr = data.data;
+                var ips = "";
+                if(arr.length > 0 ){
+                    for (var i = 0; i < arr.length; i++) {
+                        var item = arr[i];
+                        ips = ips+item.ip+",";
+                    }
+                    ips = ips.substring(0,ips.length-1);
+                    showBell(ips);
+                }
+            }else{
+                console.log(data.message);
+            }
+        });
+    }
+
+    //轮训，暂时先这么搞
+    var timer = setInterval(function () {
+        console.log("date",new Date());
+        getFailedServer();
+    },10*1000);
+
 
 </script>
 </body>

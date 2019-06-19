@@ -78,4 +78,11 @@ public class ServerController extends BaseController {
         serverService.downloadLogger(id,request,response);
     }
 
+    @GetMapping(value="/listener")
+    @ResponseBody
+    @Permission(url = qxurl,type = PermissionType.QUERY)
+    public Object listener() throws Exception {
+        return serverService.listener();
+    }
+
 }

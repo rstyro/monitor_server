@@ -15,6 +15,8 @@ import com.lrs.core.admin.entity.User;
 import com.lrs.core.monitor.entity.Server;
 import com.lrs.core.monitor.mapper.ServerMapper;
 import com.lrs.core.monitor.service.IServerService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -27,7 +29,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -41,6 +45,9 @@ import java.util.List;
 @Service
 @Transactional
 public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> implements IServerService {
+
+    @Autowired
+    private RedisTemplate<String,Object> redisTemplate;
 
     @Override
     public Result getList(PageDTO dto) throws Exception {
@@ -161,5 +168,26 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                 this.updateById(server);
             }
         }
+    }
+
+    @Override
+    public Result listener() throws Exception {
+        //有几台有问题
+        String redisKey = "serverip_";
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getIsDel, Const.NO).eq(Server::getStatus,2));
+        List<Server> resultList = new ArrayList<>();
+        if(serverList == null){
+            serverList = new ArrayList<>();
+        }else{
+            for(Server server:serverList){
+                String value = (String) redisTemplate.opsForValue().get(redisKey+server.getIp());
+                if(StringUtils.isEmpty(value)){
+                    redisTemplate.opsForValue().set(redisKey+server.getIp(),"1",3, TimeUnit.MINUTES);
+                    resultList.add(server);
+                }
+            }
+        }
+
+        return Result.ok(resultList);
     }
 }
