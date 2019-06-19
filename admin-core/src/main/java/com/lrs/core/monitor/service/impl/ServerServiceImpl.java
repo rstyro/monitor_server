@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.lrs.common.constant.ApiResultEnum;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
+import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
 import com.lrs.common.utils.Ping;
 import com.lrs.common.utils.date.DateUtil;
@@ -18,6 +20,7 @@ import com.lrs.core.monitor.mapper.ServerMapper;
 import com.lrs.core.monitor.service.IEmailAddressService;
 import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.core.monitor.service.IServerService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -50,6 +53,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 @Transactional
+@Slf4j
 public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> implements IServerService {
 
     @Autowired
@@ -175,6 +179,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     @Transactional
     public void monitor() throws Exception {
         List<Server> serverList = this.list(new LambdaQueryWrapper<Server>());
+        List<Server> unLineList = new ArrayList<>();
         for(Server server:serverList){
             Long lastSecond = server.getLastSecond();
             long nextTimeMillis = lastSecond+(server.getMonitorSecond()*1000);
@@ -184,12 +189,18 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                 if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),5)){
                     System.out.println("=date:"+LocalDateTime.now()+"ip:"+server.getIp()+" is unline");
                     server.setStatus(2);
+                    unLineList.add(server);
                 }else{
                     server.setStatus(1);
                 }
-                this.updateById(server);
+                boolean issuccess = this.updateById(server);
+                if(!issuccess){
+                    throw new TryAgainException(ApiResultEnum.FAILED);
+                }
             }
         }
+        //发送邮件
+        sendEmail(unLineList);
     }
 
     @Override
@@ -215,25 +226,37 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         return Result.ok(resultList);
     }
 
-    public void sendEmail(){
+    public void sendEmail(List<Server> unLineList){
         //创建邮件正文
+        String redisKey = "email_adress_";
         Context context = new Context();
-        context.setVariable("id", "168");
-        String emailContent = templateEngine.process("emailTemplate", context);
-        String from = "";
+        context.setVariable("unLineList", unLineList);
+        String emailContent = templateEngine.process("model/emailTemplate", context);
+        String from = "test@qq.com";
         List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
         if(emailAddressList != null && emailAddressList.size() > 0){
-            for (EmailAddress emailAddress:emailAddressList){
-                Runnable sendEmailRunable = new Runnable() {
-                    @Override
-                    public void run() {
-
-                    }
-                };
-                executor.execute(sendEmailRunable);
+            for (EmailAddress emailAddress:emailAddressList) {
+                String resultKey = redisKey + emailAddress.getToEmailAddress();
+                String value = (String) redisTemplate.opsForValue().get(resultKey);
+                System.out.println("============value="+value);
+                if (StringUtils.isEmpty(value)) {
+                    //加入缓存
+                    redisTemplate.opsForValue().set(resultKey, 1, 10, TimeUnit.MINUTES);
+                    Runnable sendEmailRunable = new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                mailService.sendHtmlMail(from, emailAddress.getToEmailAddress(), "服务器检测掉线警告", emailContent);
+                            } catch (Exception e) {
+                                redisTemplate.delete(resultKey);
+                                log.error(e.getMessage(),e);
+                            }
+                        }
+                    };
+                    executor.execute(sendEmailRunable);
+                }
             }
         }
 
-        mailService.sendHtmlMail(from,"1071426959@qq.com","服务器检测掉线警告",emailContent);
     }
 }
