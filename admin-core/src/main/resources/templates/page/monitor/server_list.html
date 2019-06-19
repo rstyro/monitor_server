@@ -46,6 +46,7 @@
                     <th>服务器名称</th>
                     <th>ip</th>
                     <th>备注</th>
+                    <th>发包次数</th>
                     <th>丢包次数</th>
                     <th>是否开启声音</th>
                     <th>多久监听,单位:秒</th>
@@ -62,6 +63,7 @@
                           <td th:text="${item.serverName }">服务器名称</td>
                           <td th:text="${item.ip }"></td>
                           <td th:text="${item.mark }">备注</td>
+                          <td th:text="${item.sendCount }">发包次数</td>
                           <td th:text="${item.lostCount }">丢包次数</td>
                           <td th:switch="${item.isOpenSound }">
                             <span th:case="0" class="label label-warning">关闭</span>
@@ -71,7 +73,7 @@
                           <td th:switch="${item.status }">
                               <span th:case="0" class="label label-warning">未连接</span>
                               <span th:case="1" class="label label-success">正常</span>
-                              <span th:case="2" class="label label-success">掉线</span>
+                              <span th:case="2" class="label label-danger">掉线</span>
                           </td>
                         <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
                         <td><div th:text="${#temporals.format(item.modifyTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
@@ -79,6 +81,8 @@
                         <span th:unless="${QX.add == '1' || QX.del == '1' || QX.edit == '1' || QX.query == '1' }" ><i class="fa fa-lock"></i> 无权限</span>
                         <span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>
                         <span data-toggle="tooltip" data-placement="right" title="删除" th:if="${QX.del == '1' }" class="btn btn-xs btn-danger"  th:data-id="${item.id }" th:onclick="del(this.getAttribute('data-id'));"><i class="fa fa-trash-o"></i></span>
+                        <span data-toggle="tooltip" data-placement="left" title="下载今天的日志" th:if="${QX.query == '1' }" class="btn btn-xs btn-success"  th:data-id="${item.id }" ><a th:href="@{/monitor/server/downloadLogger(id=${item.id})}" style="color: #fff;"><i class="fa fa-download"></i></a></span>
+                        <span data-toggle="tooltip" data-placement="left" title="警告" th:if="${QX.query == '1' }" class="btn btn-xs btn-warning"  th:data-ip="${item.ip }"  th:onclick="bell(this.getAttribute('data-ip'));" ><i class="fa fa-bell"></i></span>
                     </td>
                 </tr>
                 <tr th:unless="${QX.query == '1' }" >
@@ -139,6 +143,12 @@
                                 </div>
                             </div>
                             <div class="form-group">
+                                <label for="sendCount" class="col-sm-2 control-label"> 发包次数</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="lostCount" value="" id="sendCount" placeholder="请输入丢包多少次，算掉线">
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label for="lostCount" class="col-sm-2 control-label"> 丢包次数</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control" name="lostCount" value="" id="lostCount" placeholder="请输入丢包多少次，算掉线">
@@ -193,16 +203,29 @@
     </div>
 </div>
 
+<div th:include="include/waring :: waring" >
+</div>
 
 <script th:src="@{/static/bower_components/jquery/dist/jquery.min.js}"></script>
 <script th:src="@{/static/bower_components/bootstrap/dist/js/bootstrap.min.js}"></script>
 <!-- AdminLTE App -->
 <script th:src="@{/static/dist/js/adminlte.min.js}"></script>
+<script th:src="@{/static/aplayer/APlayer.min.js}"></script>
+<script th:src="@{/static/aplayer/waring_index.js}"></script>
 <script th:src="@{/static/js/common.js}"></script>
 <script th:src="@{/static/page/src/kkpager.js}"></script>
 <script th:inline="javascript">
+    var isShow=false;
+    // setInterval(function () {
+    //     console.log("date",new Date().getTime());
+    //     waring();
+    // },10*1000);
     //init
     $(function(){
+
+        //提示框
+        $("[data-toggle='tooltip']").tooltip();
+
         var pageNo = getParameter('pageNo');
         if(!pageNo){
             pageNo = 1;
@@ -232,6 +255,7 @@
             var status = $("#status").val();
             var mark = $("#mark").val();
             var isDel = $("#isDel").val();
+            var sendCount = $("#sendCount").val();
             var lostCount = $("#lostCount").val();
             var isOpenSound = $("#isOpenSound").val();
             var monitorSecond = $("#monitorSecond").val();
@@ -244,7 +268,7 @@
                     type:"POST",
                     url:_ctx+url,
                     cache:false,
-                    data:{id:id,status:status,serverName:serverName,ip:ip,mark:mark,isDel:isDel,lostCount:lostCount,isOpenSound:isOpenSound,monitorSecond:monitorSecond,createBy:createBy,createTime:createTime,modifyBy:modifyBy,modifyTime:modifyTime, time:new Date().getTime()},
+                    data:{id:id,status:status,serverName:serverName,ip:ip,mark:mark,isDel:isDel,sendCount:sendCount,lostCount:lostCount,isOpenSound:isOpenSound,monitorSecond:monitorSecond,createBy:createBy,createTime:createTime,modifyBy:modifyBy,modifyTime:modifyTime, time:new Date().getTime()},
                     dataType:"json",
                      success:function(data){
                     if(data.status == "200"){
@@ -262,6 +286,13 @@
         $(".searcher").click(function () {
             skipPage(1);
         })
+
+        $('#warningModal').on('hide.bs.modal',
+            function() {
+            console.log("关闭模态框");
+                // ap1.toggle();
+                ap1.pause()
+            })
     });
     var listUrl = "/monitor/server/list";
     var editUrl = "/monitor/server/edit";
@@ -298,7 +329,7 @@
             if(data.status == "200"){
                 var item = data.data;
                 console.log("item:",item);
-                setData( item.id ,item.status, item.serverName , item.ip , item.mark , item.isDel , item.lostCount , item.isOpenSound , item.monitorSecond , item.createBy , item.createTime , item.modifyBy , item.modifyTime )
+                setData( item.id ,item.status, item.serverName , item.ip , item.mark , item.isDel ,item.sendCount, item.lostCount , item.isOpenSound , item.monitorSecond , item.createBy , item.createTime , item.modifyBy , item.modifyTime )
             }else{
                 alert(data.message);
             }
@@ -324,7 +355,7 @@
      * 校验参数
      * @returns {boolean}
      */
-    function checkData(serverName,ip,mark,isDel,lostCount,isOpenSound,monitorSecond,createBy,createTime,modifyBy,modifyTime){
+    function checkData(serverName,ip,mark,isDel,sendCount,lostCount,isOpenSound,monitorSecond,createBy,createTime,modifyBy,modifyTime){
             if(serverName == ""){
                 alert("服务器名称不能为空");
                 $("input[name='serverName']").focus();
@@ -335,11 +366,11 @@
                 $("input[name='ip']").focus();
                 return false;
              }
-            if(mark == ""){
-                alert("备注不能为空");
-                $("input[name='mark']").focus();
+            if(sendCount == ""){
+                alert("发包次数不能为空");
+                $("input[name='sendCount']").focus();
                 return false;
-             }
+            }
             if(lostCount == ""){
                 alert("丢包次数不能为空");
                 $("input[name='lostCount']").focus();
@@ -362,13 +393,14 @@
     /**
      *  赋值
       */
-    function setData(  id ,status, serverName , ip , mark , isDel , lostCount , isOpenSound , monitorSecond , createBy , createTime , modifyBy , modifyTime ){
+    function setData(  id ,status, serverName , ip , mark , isDel , sendCount,lostCount , isOpenSound , monitorSecond , createBy , createTime , modifyBy , modifyTime ){
          $("#id").val(id);
          $("#serverName").val(serverName);
          $("#ip").val(ip);
          $("#status").val(status);
          $("#mark").val(mark);
          $("#isDel").val(isDel);
+         $("#sendCount").val(sendCount);
          $("#lostCount").val(lostCount);
          $("#isOpenSound").val(isOpenSound);
          $("#monitorSecond").val(monitorSecond);
@@ -377,6 +409,23 @@
          $("#modifyBy").val(modifyBy);
          $("#modifyTime").val(modifyTime);
     }
+
+    function bell(ip) {
+        console.log("bell:",ip);
+        waring(ip);
+    }
+
+    function waring(ip) {
+        isShow = !isShow;
+        console.log("isshow:",isShow)
+        if(isShow){
+            $("#warningIp").text(ip);
+            $("#warningModal").modal("show")
+        }else{
+            $("#warningModal").modal("hide")
+        }
+    }
+
 </script>
 </body>
 </html>

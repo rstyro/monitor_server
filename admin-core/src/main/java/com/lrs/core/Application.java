@@ -9,10 +9,12 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @MapperScan({"com.lrs.core.*.mapper"})
 @ServletComponentScan
 @SpringBootApplication
+@EnableScheduling
 public class Application extends SpringBootServletInitializer implements WebServerFactoryCustomizer<ConfigurableWebServerFactory> {
 
 	public static void main(String[] args) {

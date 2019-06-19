@@ -48,6 +48,10 @@ public class Server implements Serializable {
     private Integer status;
 
     /**
+     * 发包次数
+     */
+    private Integer sendCount;
+    /**
      * 丢包次数
      */
     private Integer lostCount;

@@ -1,0 +1,25 @@
+<!-- Logo -->
+<div th:fragment="waring">
+	<div class="modal fade" id="warningModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal"
+							aria-hidden="true">&times;</button>
+					<h4 class="modal-title" id="menumodelHead">服务器警告</h4>
+				</div>
+				<div class="modal-body">
+					<div style="width: 150px;height: 100px;margin: 10px auto">
+						<div style="color: red">警告:服务器掉线</div>
+						<div style="color: red">IP地址：<span id="warningIp"></span></div>
+						<div id="warningPlaying"></div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-dismiss="modal">关闭</button>
+					<button type="button" class="btn btn-success" id="submitBtn" >添加</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

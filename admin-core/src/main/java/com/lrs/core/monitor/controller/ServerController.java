@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 
 /**
  * <p>
@@ -67,6 +70,12 @@ public class ServerController extends BaseController {
     @Permission(url = qxurl,type = PermissionType.QUERY)
     public Object query(Long id) throws Exception {
         return serverService.getDetail(id);
+    }
+
+    @GetMapping(value="/downloadLogger")
+    @Permission(url = qxurl,type = PermissionType.QUERY)
+    public void downloadLogger(Long id, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        serverService.downloadLogger(id,request,response);
     }
 
 }

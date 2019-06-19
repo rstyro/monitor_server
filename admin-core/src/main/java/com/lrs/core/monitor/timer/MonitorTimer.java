@@ -31,7 +31,6 @@ public class MonitorTimer {
      */
     @Scheduled(fixedDelay = 10*1000)
     public void pingBySec(){
-        System.out.println("bbbbb");
         try {
             serverService.monitor();
         }catch (Exception e){

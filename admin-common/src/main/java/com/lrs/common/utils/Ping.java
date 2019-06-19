@@ -29,10 +29,10 @@ public class Ping {
         }
     }
 
-    public static void savePingLogger(String ipAddress,String path) throws Exception {
+    public static void savePingLogger(String ipAddress,String path,int pingTimes, int timeOut) throws Exception {
         String line = null;
         try {
-            Process pro = Runtime.getRuntime().exec("ping " + ipAddress+ " -n " + 3    + " -w " + 5);
+            Process pro = Runtime.getRuntime().exec("ping " + ipAddress+ " -n " + pingTimes    + " -w " + timeOut);
             System.out.println(pro.toString());
             BufferedReader buf = new BufferedReader(new InputStreamReader(pro.getInputStream(),"gbk"));
             FileUtils.write(buf,PathsUtils.getAbsolutePath(path));
@@ -108,11 +108,25 @@ public class Ping {
      * @param lostCount
      * @return
      */
+    public static boolean isUnline(String ipAddress,int lostCount, int pingTimes, int timeOut) {
+        int pingCount = getPingCount(ipAddress, pingTimes, timeOut);
+        System.out.println("pingTimes - pingCount="+(pingTimes - pingCount));
+        System.out.println("lostCount="+lostCount);
+        System.out.println("ipAddress="+ipAddress+"isUnline="+((pingTimes - pingCount) > lostCount));
+        if(pingTimes - pingCount > lostCount){
+            return true;
+        }
+        return false;
+    }
+
     public static boolean isUnline(String ipAddress,int lostCount) {
         int pingTimes=10;
         int timeOut=5;
         int pingCount = getPingCount(ipAddress, pingTimes, timeOut);
-        if(pingTimes - pingCount>lostCount){
+        System.out.println("pingTimes - pingCount="+(pingTimes - pingCount));
+        System.out.println("lostCount="+lostCount);
+        System.out.println("ipAddress="+ipAddress+"isUnline="+((pingTimes - pingCount) > lostCount));
+        if(pingTimes - pingCount > lostCount){
             return true;
         }
         return false;
