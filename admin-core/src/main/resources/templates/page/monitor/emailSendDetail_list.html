@@ -33,7 +33,7 @@
                     <span class="input-group-addon searcher" style="cursor:pointer;"><i class="fa fa-search"></i> 搜素</span>
                 </div>
             </div>
-            <button th:onclick="add();" th:if="${QX.add == '1' && QX.query == '1' }" class="btn btn-success btn-sm" ><i class="fa fa-plus"></i> &nbsp;&nbsp;新增</button>
+            <!--<button th:onclick="add();" th:if="${QX.add == '1' && QX.query == '1' }" class="btn btn-success btn-sm" ><i class="fa fa-plus"></i> &nbsp;&nbsp;新增</button>-->
         </div>
         <!-- /.box-header -->
         <div class="box-body">
@@ -41,13 +41,12 @@
                 <thead>
                 <tr>
                     <th>序号</th>
-                            <th>id</th>
-                          <th>作者</th>
-                          <th>标题</th>
-                          <th>内容</th>
-                          <th>是否删除</th>
-                          <th>创建时间</th>
-                          <th>更新时间</th>
+                    <th>ID</th>
+                    <th>发送地址</th>
+                    <th>接收地址</th>
+                    <th>内容</th>
+                    <th>ip</th>
+                    <th>创建时间</th>
                     <th>操作</th>
                 </tr>
                 </thead>
@@ -55,20 +54,19 @@
                 <tr th:if="${QX.query == '1' }" th:each="item,stat :${list.data.records }" >
                     <td th:text="${stat.count}">1</td>
                           <td th:text="${item.id }"></td>
-                          <td th:text="${item.auther }">作者</td>
-                          <td th:text="${item.title }">标题</td>
-                          <td th:text="${item.content }">内容</td>
-                          <td th:text="${item.isDeleted }">是否删除</td>
-                        <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" >创建时间</div></td>
-                        <td><div th:text="${#temporals.format(item.modifyTime, 'yyyy-MM-dd HH:mm:ss') }" >更新时间</div></td>
+                          <td th:text="${item.fromEmail }">邮件发送地址</td>
+                          <td th:text="${item.toEmail }">发送给谁</td>
+                          <td th:text="${item.content }"></td>
+                          <td th:text="${item.ip }"></td>
+                        <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
                     <td>
                         <span th:unless="${QX.add == '1' || QX.del == '1' || QX.edit == '1' || QX.query == '1' }" ><i class="fa fa-lock"></i> 无权限</span>
-                        <span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>
+                        <!--<span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>-->
                         <span data-toggle="tooltip" data-placement="right" title="删除" th:if="${QX.del == '1' }" class="btn btn-xs btn-danger"  th:data-id="${item.id }" th:onclick="del(this.getAttribute('data-id'));"><i class="fa fa-trash-o"></i></span>
                     </td>
                 </tr>
                 <tr th:unless="${QX.query == '1' }" >
-                    <td colspan="9" rowspan="1" align="center">
+                    <td colspan="10" rowspan="1" align="center">
                         <h2>您无权限查看该页面</h2>
                     </td>
                 </tr>
@@ -95,33 +93,45 @@
                          <input type="hidden" name="id" id="id" value="0"/>
                     <input type="hidden" name="actionurl" id="actionurl" value="/"/>
                             <div class="form-group">
-                                <label for="auther" class="col-sm-2 control-label"> 作者</label>
+                                <label for="fromEmail" class="col-sm-2 control-label"> 邮件发送地址</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="auther" value="" id="auther" placeholder="请输入作者">
+                                    <input type="text" class="form-control" name="fromEmail" value="" id="fromEmail" placeholder="请输入邮件发送地址">
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="title" class="col-sm-2 control-label"> 标题</label>
+                                <label for="toEmail" class="col-sm-2 control-label"> 发送给谁</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="title" value="" id="title" placeholder="请输入标题">
+                                    <input type="text" class="form-control" name="toEmail" value="" id="toEmail" placeholder="请输入发送给谁">
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="content" class="col-sm-2 control-label"> 内容</label>
+                                <label for="content" class="col-sm-2 control-label"> content</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="content" value="" id="content" placeholder="请输入内容">
+                                    <input type="text" class="form-control" name="content" value="" id="content" placeholder="请输入content">
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="createTime" class="col-sm-2 control-label"> 创建时间</label>
+                            <div class="form-group hidden">
+                                <label for="ip" class="col-sm-2 control-label"> ip</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="createTime" value="" id="createTime" placeholder="请输入创建时间">
+                                    <input type="text" class="form-control" name="ip" value="" id="ip" placeholder="请输入ip">
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="modifyTime" class="col-sm-2 control-label"> 更新时间</label>
+                            <div class="form-group hidden">
+                                <label for="isDel" class="col-sm-2 control-label"> isDel</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="modifyTime" value="" id="modifyTime" placeholder="请输入更新时间">
+                                    <input type="text" class="form-control" name="isDel" value="" id="isDel" placeholder="请输入isDel">
+                                </div>
+                            </div>
+                            <div class="form-group hidden">
+                                <label for="createBy" class="col-sm-2 control-label"> createBy</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="createBy" value="" id="createBy" placeholder="请输入createBy">
+                                </div>
+                            </div>
+                            <div class="form-group hidden">
+                                <label for="createTime" class="col-sm-2 control-label"> createTime</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="createTime" value="" id="createTime" placeholder="请输入createTime">
                                 </div>
                             </div>
                 </form>
@@ -168,18 +178,19 @@
         $("#submitBtn").click(function(){
             var url = $("input[name='actionurl']").val();
             var id = $("#id").val();
-            var auther = $("#auther").val();
-            var title = $("#title").val();
+            var fromEmail = $("#fromEmail").val();
+            var toEmail = $("#toEmail").val();
             var content = $("#content").val();
-            var isDeleted = $("#isDeleted").val();
+            var ip = $("#ip").val();
+            var isDel = $("#isDel").val();
+            var createBy = $("#createBy").val();
             var createTime = $("#createTime").val();
-            var modifyTime = $("#modifyTime").val();
-            if(checkData(auther,title,content,isDeleted,createTime,modifyTime)){
+            if(checkData(fromEmail,toEmail,content,ip,isDel,createBy,createTime)){
                 $.ajax({
                     type:"POST",
                     url:_ctx+url,
                     cache:false,
-                    data:{id:id,auther:auther,title:title,content:content,isDeleted:isDeleted,createTime:createTime,modifyTime:modifyTime, time:new Date().getTime()},
+                    data:{id:id,fromEmail:fromEmail,toEmail:toEmail,content:content,ip:ip,isDel:isDel,createBy:createBy,createTime:createTime, time:new Date().getTime()},
                     dataType:"json",
                      success:function(data){
                     if(data.status == "200"){
@@ -194,11 +205,11 @@
 
         });
     });
-    var listUrl = "/act/acticle/list";
-    var editUrl = "/act/acticle/edit";
-    var addUrl = "/act/acticle/add";
-    var delUrl = "/act/acticle/del";
-    var queryUrl = "/act/acticle/query";
+    var listUrl = "/monitor/emailSendDetail/list";
+    var editUrl = "/monitor/emailSendDetail/edit";
+    var addUrl = "/monitor/emailSendDetail/add";
+    var delUrl = "/monitor/emailSendDetail/del";
+    var queryUrl = "/monitor/emailSendDetail/query";
 
     //跳转页面
     function  skipPage(pageNo) {
@@ -213,7 +224,7 @@
         $("input[name='actionurl']").val(addUrl);
         $("#modelHead").text("新增");
         $("#submitBtn").text("新增");
-        setData("","","","","","","");
+        setData("","","","","","","","");
         $("#itemModal").modal("show");
     }
     /**
@@ -229,7 +240,7 @@
             if(data.status == "200"){
                 var item = data.data;
                 console.log("item:",item);
-                setData( item.id , item.auther , item.title , item.content , item.isDeleted , item.createTime , item.modifyTime )
+                setData( item.id , item.fromEmail , item.toEmail , item.content , item.ip , item.isDel , item.createBy , item.createTime )
             }else{
                 alert(data.message);
             }
@@ -255,20 +266,35 @@
      * 校验参数
      * @returns {boolean}
      */
-    function checkData(auther,title,content,isDeleted,createTime,modifyTime){
-            if(auther == ""){
-                alert("作者不能为空");
-                $("input[name='auther']").focus();
+    function checkData(fromEmail,toEmail,content,ip,isDel,createBy,createTime){
+            if(fromEmail == ""){
+                alert("邮件发送地址不能为空");
+                $("input[name='fromEmail']").focus();
                 return false;
              }
-            if(title == ""){
-                alert("标题不能为空");
-                $("input[name='title']").focus();
+            if(toEmail == ""){
+                alert("发送给谁不能为空");
+                $("input[name='toEmail']").focus();
                 return false;
              }
             if(content == ""){
-                alert("内容不能为空");
+                alert("content不能为空");
                 $("input[name='content']").focus();
+                return false;
+             }
+            if(ip == ""){
+                alert("ip不能为空");
+                $("input[name='ip']").focus();
+                return false;
+             }
+            if(isDel == ""){
+                alert("isDel不能为空");
+                $("input[name='isDel']").focus();
+                return false;
+             }
+            if(createBy == ""){
+                alert("createBy不能为空");
+                $("input[name='createBy']").focus();
                 return false;
              }
 
@@ -278,14 +304,15 @@
     /**
      *  赋值
       */
-    function setData(  id , auther , title , content , isDeleted , createTime , modifyTime ){
+    function setData(  id , fromEmail , toEmail , content , ip , isDel , createBy , createTime ){
          $("#id").val(id);
-         $("#auther").val(auther);
-         $("#title").val(title);
+         $("#fromEmail").val(fromEmail);
+         $("#toEmail").val(toEmail);
          $("#content").val(content);
-         $("#isDeleted").val(isDeleted);
+         $("#ip").val(ip);
+         $("#isDel").val(isDel);
+         $("#createBy").val(createBy);
          $("#createTime").val(createTime);
-         $("#modifyTime").val(modifyTime);
     }
 </script>
 </body>

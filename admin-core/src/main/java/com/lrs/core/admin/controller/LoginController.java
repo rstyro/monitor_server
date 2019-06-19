@@ -1,6 +1,7 @@
 package com.lrs.core.admin.controller;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lrs.common.constant.Const;
 import com.lrs.common.constant.Result;
 import com.lrs.core.admin.dto.LoginDTO;
@@ -8,6 +9,8 @@ import com.lrs.core.admin.entity.Menu;
 import com.lrs.core.admin.entity.User;
 import com.lrs.core.admin.service.ILoginService;
 import com.lrs.core.base.BaseController;
+import com.lrs.core.monitor.entity.Server;
+import com.lrs.core.monitor.service.IServerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -34,6 +37,7 @@ public class LoginController extends BaseController {
     @Autowired
     private ILoginService loginService;
 
+
     /**
      * 入口
      * @return
@@ -56,6 +60,7 @@ public class LoginController extends BaseController {
             if(allMenu != null){
                 model.addAttribute("menus", allMenu);
             }
+
             model.addAttribute("adminName", adminName);
             model.addAttribute("userName", ((User)this.getSession().getAttribute(Const.SESSION_USER)).getNickName());
             model.addAttribute("userPath", ((User)this.getSession().getAttribute(Const.SESSION_USER)).getPicPath());

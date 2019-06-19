@@ -1,7 +1,7 @@
 var ap1 = new APlayer({
     element: document.getElementById('warningPlaying'),
     mini: true,
-    autoplay: true,
+    autoplay: false,
     lrcType: false,
     mutex: true,
     preload: 'metadata',

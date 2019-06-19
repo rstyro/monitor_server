@@ -58,6 +58,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                         .or()
                         .like(Server::getMark,dto.getKeyword());
             }
+            queryWrapper.lambda().orderByDesc(Server::getStatus).orderByDesc(Server::getCreateTime);
         IPage<Server> iPage = this.page(page, queryWrapper);
         return Result.ok(iPage);
     }
