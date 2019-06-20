@@ -90,9 +90,9 @@ public class Ping {
         Runtime r = Runtime.getRuntime();  // 将要执行的ping命令,此命令是windows格式的命令
         String pingCommand = pingCommand(ipAddress,pingTimes,timeOut);
         try {   // 执行命令并获取输出
-            System.out.println(pingCommand);
             Process p = r.exec(pingCommand);
             if (p == null) {
+                logger.info("process is null");
                 return 0;
             }
             in = new BufferedReader(new InputStreamReader(p.getInputStream()));   // 逐行检查输出,计算类似出现=23ms TTL=62字样的次数
@@ -146,7 +146,13 @@ public class Ping {
 
     //若line含有=18ms TTL=16字样,说明已经ping通,返回1,否則返回0.
     private static int getCheckResult(String line) {  // System.out.println("控制台输出的结果为:"+line);
-        Pattern pattern = Pattern.compile("(\\d+ms)(\\s+)(TTL=\\d+)",    Pattern.CASE_INSENSITIVE);
+        String os = System.getProperty("os.name");
+        Pattern pattern =null;
+        if(os.toLowerCase().startsWith("win")){
+            pattern = Pattern.compile("(\\d+ms)(\\s+)(TTL=\\d+)",    Pattern.CASE_INSENSITIVE);
+        }else{
+            pattern = Pattern.compile("(TTL=\\d+)",    Pattern.CASE_INSENSITIVE);
+        }
         Matcher matcher = pattern.matcher(line);
         while (matcher.find()) {
             return 1;
@@ -166,16 +172,19 @@ public class Ping {
     }
 
     public static void main(String[] args) throws Exception {
-        String ipAddress = "127.0.0.1";
-        String ipAddress2 = "192.168.1.58";
-        String ipAddress3 = "47.244.120.199";
-        String ipAddress4 = "119.23.38.145";
-//        System.out.println(ping(ipAddress4));
-//        ping02(ipAddress4);
-
-        System.out.println(ping(ipAddress,3,5));
-
-        boolean unline = isUnline(ipAddress,  3);
-        System.out.println(unline);
+//        String ipAddress = "127.0.0.1";
+//        String ipAddress2 = "192.168.1.58";
+//        String ipAddress3 = "47.244.120.199";
+//        String ipAddress4 = "119.23.38.145";
+////        System.out.println(ping(ipAddress4));
+////        ping02(ipAddress4);
+//
+//        System.out.println(ping(ipAddress,3,5));
+//
+//        boolean unline = isUnline(ipAddress,  3);
+//        System.out.println(unline);
+        String line="64 bytes from 47.112.136.247: icmp_seq=1 ttl=64 time=0.139 ms";
+        int checkResult = getCheckResult(line);
+        System.out.println("checkResult="+checkResult);
     }
 }
