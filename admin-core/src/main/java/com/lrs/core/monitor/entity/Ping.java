@@ -125,7 +125,7 @@ public class Ping {
         System.out.println("pingTimes - pingCount="+(pingTimes - pingCount));
         System.out.println("lostCount="+lostCount);
         System.out.println("ipAddress="+ipAddress+"isUnline="+((pingTimes - pingCount) > lostCount));
-        if(pingTimes - pingCount > lostCount){
+        if((pingTimes - pingCount) >= lostCount){
             return true;
         }
         return false;
