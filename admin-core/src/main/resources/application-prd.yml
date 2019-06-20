@@ -23,9 +23,9 @@ spring:
   datasource:
     sql-script-encoding: UTF-8
     driverClassName: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/monitor_server?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Hongkong&autoReconnect=true&allowPublicKeyRetrieval=true
-    username: rstyro
-    password: rstyro
+    url: jdbc:mysql://120.79.201.119:3306/monitor_server?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Hongkong&autoReconnect=true&allowPublicKeyRetrieval=true
+    username: monitor
+    password: monitor
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
       minimum-idle: 5
@@ -55,8 +55,8 @@ spring:
         max-wait: -1ms
     timeout: 10000ms
   mail:
-    username: 1006059906@qq.com
-    password: jhcyazlccaewbefd
+    username: 404991630@qq.com
+    password: emphiofnmfagcadf
     port: 465
     default-encoding: UTF-8
     host: smtp.qq.com
@@ -71,4 +71,3 @@ spring:
             port: 465
             fallback: false
             class: javax.net.ssl.SSLSocketFactory
-
