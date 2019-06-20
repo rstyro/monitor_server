@@ -1,4 +1,10 @@
-package com.lrs.common.utils;
+package com.lrs.core.monitor.entity;
+
+import com.lrs.common.utils.FileUtils;
+import com.lrs.common.utils.PathsUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,6 +14,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Ping {
+
+    private static Logger logger = LoggerFactory.getLogger(Ping.class);
+
     public static boolean ping(String ipAddress) throws Exception {
         int  timeOut =  3000 ;  //超时应该在3钞以上
         boolean status = InetAddress.getByName(ipAddress).isReachable(timeOut);     // 当返回值是true时，说明host是可用的，false则不可。
@@ -35,7 +44,7 @@ public class Ping {
             Process pro = Runtime.getRuntime().exec(pingCommand(ipAddress,pingTimes,timeOut));
             System.out.println(pro.toString());
             BufferedReader buf = new BufferedReader(new InputStreamReader(pro.getInputStream(),"gbk"));
-            FileUtils.write(buf,PathsUtils.getAbsolutePath(path));
+            FileUtils.write(buf, PathsUtils.getAbsolutePath(path));
             while ((line = buf.readLine()) != null){
                 System.out.println(new String(line.getBytes(),"utf-8"));
             }
@@ -58,7 +67,10 @@ public class Ping {
             int connectedCount = 0;
             String line = null;
             while ((line = in.readLine()) != null) {
-                connectedCount += getCheckResult(line);
+                logger.info("ping line={}",line);
+                if(!StringUtils.isEmpty(line)){
+                    connectedCount += getCheckResult(line);
+                }
             }   // 如果出现类似=23ms TTL=62这样的字样,出现的次数=测试次数则返回真
             return connectedCount == pingTimes;
         } catch (Exception ex) {
