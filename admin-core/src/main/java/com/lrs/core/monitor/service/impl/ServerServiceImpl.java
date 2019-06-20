@@ -189,8 +189,8 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     }
 
     @Transactional
-    public void monitor(int modNumber) throws Exception {
-        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})=0",modNumber));
+    public void monitor(int modNumber,int resultNum) throws Exception {
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})={1}",modNumber,resultNum));
         List<Server> unLineList = new ArrayList<>();
         for(Server server:serverList){
             Callable<Server> serverCallable = new Callable<Server>() {

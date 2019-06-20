@@ -20,7 +20,7 @@ public class MonitorTimer {
     public void pingMod2(){
         try {
             System.out.println("===============2定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(2);
+            serverService.monitor(2,0);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -29,7 +29,7 @@ public class MonitorTimer {
     public void pingMod3(){
         try {
             System.out.println("===============3定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(3);
+            serverService.monitor(2,1);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
