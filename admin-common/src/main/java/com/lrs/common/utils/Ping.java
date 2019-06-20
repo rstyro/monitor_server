@@ -32,7 +32,7 @@ public class Ping {
     public static void savePingLogger(String ipAddress,String path,int pingTimes, int timeOut) throws Exception {
         String line = null;
         try {
-            Process pro = Runtime.getRuntime().exec("ping " + ipAddress+ " -n " + pingTimes    + " -w " + timeOut);
+            Process pro = Runtime.getRuntime().exec(pingCommand(ipAddress,pingTimes,timeOut));
             System.out.println(pro.toString());
             BufferedReader buf = new BufferedReader(new InputStreamReader(pro.getInputStream(),"gbk"));
             FileUtils.write(buf,PathsUtils.getAbsolutePath(path));
@@ -47,7 +47,7 @@ public class Ping {
     public static boolean ping(String ipAddress, int pingTimes, int timeOut) {
         BufferedReader in = null;
         Runtime r = Runtime.getRuntime();  // 将要执行的ping命令,此命令是windows格式的命令
-        String pingCommand = "ping " + ipAddress + " -n " + pingTimes    + " -w " + timeOut;
+        String pingCommand = pingCommand(ipAddress,pingTimes,timeOut);
         try {   // 执行命令并获取输出
             System.out.println(pingCommand);
             Process p = r.exec(pingCommand);
@@ -76,7 +76,7 @@ public class Ping {
     public static int getPingCount(String ipAddress, int pingTimes, int timeOut) {
         BufferedReader in = null;
         Runtime r = Runtime.getRuntime();  // 将要执行的ping命令,此命令是windows格式的命令
-        String pingCommand = "ping " + ipAddress + " -n " + pingTimes    + " -w " + timeOut;
+        String pingCommand = pingCommand(ipAddress,pingTimes,timeOut);
         try {   // 执行命令并获取输出
             System.out.println(pingCommand);
             Process p = r.exec(pingCommand);
@@ -141,6 +141,18 @@ public class Ping {
         }
         return 0;
     }
+
+    public static String pingCommand(String ipAddress,int pingTimes,int timeOut){
+        String pingCommand = "";
+        String os = System.getProperty("os.name");
+        if(os.toLowerCase().startsWith("win")){
+            pingCommand = "ping " + ipAddress + " -n " + pingTimes    + " -w " + timeOut;
+        }else{
+            pingCommand = "ping " + ipAddress + " -c " + pingTimes;
+        }
+        return pingCommand;
+    }
+
     public static void main(String[] args) throws Exception {
         String ipAddress = "127.0.0.1";
         String ipAddress2 = "192.168.1.58";
