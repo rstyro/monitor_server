@@ -25,6 +25,7 @@ import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.core.monitor.service.IServerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -85,6 +86,9 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     private IServerService serverService;
 
     private final static String refreshKey = "refresh";
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
 
     @Override
     public Result getList(PageDTO dto) throws Exception {
@@ -293,7 +297,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         Context context = new Context();
         context.setVariable("unLineList", unLineList);
         String emailContent = templateEngine.process("model/emailTemplate", context);
-        String from = "1006059906@qq.com";
+        String from = fromEmail;
         List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
 
         if(emailAddressList != null && emailAddressList.size() > 0){
