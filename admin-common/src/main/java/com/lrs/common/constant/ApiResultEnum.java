@@ -13,6 +13,8 @@ public enum ApiResultEnum {
 
 	//参数
 	PARAMETER_NULL("10001","缺少参数或值为空"),
+	PARAMETER_NOT_FOUND("10002","找不到业务数据"),
+	PARAMETER_IP_EXIST("10003","该IP服务器地址已存在"),
 
 
 

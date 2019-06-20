@@ -7,9 +7,9 @@
     <body>
         <p>您好管理员,服务器IP：</p>
         <ul th:each="item,mStat:${unLineList}">
-            <li><h3 th:text="item.ip">127.0.0.1</h3></li>
+            <li><h3 th:text="${item.ip}">127.0.0.1</h3></li>
         </ul>
-    <p>检测到服务掉线，请处理</p>
+    <p>检测到服务掉线，请尽快处理</p>
 
     </body>
 </html>

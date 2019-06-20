@@ -11,12 +11,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class ExecutorPoolConfig {
 
     @Bean
-    public Executor executor() {
+    public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         //核心线程池大小
-        executor.setCorePoolSize(10);
+        executor.setCorePoolSize(5);
         //最大线程数
-        executor.setMaxPoolSize(20);
+        executor.setMaxPoolSize(10);
         //队列容量
         executor.setQueueCapacity(200);
         //活跃时间

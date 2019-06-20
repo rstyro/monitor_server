@@ -37,7 +37,6 @@ public class Jurisdiction {
 					}else{																
 						//获取上一个按钮权限，并移除
 						Role userRole = ((User)session.getAttribute(Const.SESSION_USER)).getRole();
-						System.out.println("userRole="+userRole);
 						Map<String, String> map = new HashMap<>();
 						long MENU_ID =  menuList.get(i).getSubMenu().get(j).getMenuId();
 						//获取当前登录者的用户，判断是否是admin
@@ -50,7 +49,6 @@ public class Jurisdiction {
 						session.removeAttribute(Const.SESSION_QX);
 						//重新分配按钮权限
 						session.setAttribute(Const.SESSION_QX, map);
-						System.out.println("map="+map);
 						return true;
 					}
 				}
@@ -70,7 +68,6 @@ public class Jurisdiction {
 		/**
 		 * 判断是否拥有当前点击菜单的权限（内部过滤,防止通过url进入跳过菜单权限）
 		 */
-		System.out.println("menuUrl="+menuUrl+",type="+type);
 		List<Menu> menuList = (List)session.getAttribute(Const.SESSION_ALL_MENU); //获取菜单列表
 		for(int i=0;i<menuList.size();i++){
 			for(int j=0;j<menuList.get(i).getSubMenu().size();j++){
@@ -79,7 +76,6 @@ public class Jurisdiction {
 						return false;
 					}else{																//按钮判断
 						Role userRole = ((User)session.getAttribute(Const.SESSION_USER)).getRole();
-						System.out.println("userRole="+userRole);
 						long MENU_ID =  menuList.get(i).getSubMenu().get(j).getMenuId();
 						String USERNAME = ((User)session.getAttribute(Const.SESSION_USER)).getUsername();
 						Boolean isAdmin = "admin".equals(USERNAME);

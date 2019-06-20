@@ -1,5 +1,6 @@
 package com.lrs.core.monitor.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,13 +9,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.lrs.common.constant.ApiResultEnum;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
+import com.lrs.common.exception.ApiException;
 import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
 import com.lrs.common.utils.Ping;
 import com.lrs.common.utils.date.DateUtil;
 import com.lrs.core.admin.entity.User;
+import com.lrs.core.aspect.IsTryAgain;
 import com.lrs.core.common.email.service.MailService;
 import com.lrs.core.monitor.entity.EmailAddress;
+import com.lrs.core.monitor.entity.EmailSendDetail;
 import com.lrs.core.monitor.entity.Server;
 import com.lrs.core.monitor.mapper.ServerMapper;
 import com.lrs.core.monitor.service.IEmailAddressService;
@@ -23,6 +27,7 @@ import com.lrs.core.monitor.service.IServerService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,8 +43,12 @@ import java.io.FileInputStream;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 
@@ -72,7 +81,12 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     private IEmailSendDetailService emailSendDetailService;
 
     @Autowired
-    private Executor executor;
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
+    @Autowired
+    private IServerService serverService;
+
+    private final static String refreshKey = "refresh";
 
     @Override
     public Result getList(PageDTO dto) throws Exception {
@@ -90,13 +104,17 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                         .or()
                         .like(Server::getMark,dto.getKeyword());
             }
-            queryWrapper.lambda().orderByDesc(Server::getStatus).orderByDesc(Server::getCreateTime);
+            queryWrapper.lambda().orderByDesc(Server::getCreateTime);
         IPage<Server> iPage = this.page(page, queryWrapper);
         return Result.ok(iPage);
     }
 
     @Override
     public Result add(Server item, User user) throws Exception {
+        int count = this.count(new LambdaQueryWrapper<Server>().eq(Server::getIp, item.getIp()));
+        if(count >0){
+            throw new ApiException(ApiResultEnum.PARAMETER_IP_EXIST);
+        }
         if(item.getCreateTime() == null){
             item.setStatus(0);
             item.setCreateBy(user.getUserId());
@@ -108,6 +126,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
 
     @Override
     public Result edit(Server item, User user) throws Exception {
+        System.out.println("item======="+item);
         item.setModifyBy(user.getUserId());
         item.setModifyTime(LocalDateTime.now());
         this.updateById(item);
@@ -169,42 +188,84 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             } catch (Exception e) {
             }
         }
-//        response.setCharacterEncoding("utf-8");
-//        response.reset();
-//        response.setContentType("application/OCTET-STREAM;charset=utf-8");
-//        response.setHeader("pragma", "no-cache");
-//        response.addHeader("Content-Disposition", "attachment;filename=\""+ fileName + ".xls\"");// 点击导出excle按钮时候页面显示的默认名称
     }
 
     @Transactional
-    public void monitor() throws Exception {
-        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>());
+    public void monitor(int modNumber) throws Exception {
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})=0",modNumber));
         List<Server> unLineList = new ArrayList<>();
         for(Server server:serverList){
-            Long lastSecond = server.getLastSecond();
-            long nextTimeMillis = lastSecond+(server.getMonitorSecond()*1000);
-            if(nextTimeMillis < System.currentTimeMillis()){
-                Ping.savePingLogger(server.getIp(),"logs/monitor/"+ DateUtil.getDays()+"_"+server.getIp()+".log",server.getSendCount(),30);
-                server.setLastSecond(nextTimeMillis);
-                if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),5)){
-                    System.out.println("=date:"+LocalDateTime.now()+"ip:"+server.getIp()+" is unline");
-                    server.setStatus(2);
-                    unLineList.add(server);
-                }else{
-                    server.setStatus(1);
+            Callable<Server> serverCallable = new Callable<Server>() {
+                @Override
+                public Server call() throws Exception {
+                   return serverService.pingServer(server);
                 }
-                boolean issuccess = this.updateById(server);
-                if(!issuccess){
-                    throw new TryAgainException(ApiResultEnum.FAILED);
-                }
+            };
+            Future<Server> serverFuture = threadPoolTaskExecutor.submit(serverCallable);
+            Server resultServer = serverFuture.get();
+            if(resultServer != null){
+                unLineList.add(resultServer);
             }
         }
-        //发送邮件
-        sendEmail(unLineList);
+        if(unLineList.size() > 0){
+            //发送邮件
+            sendEmail(unLineList);
+        }
     }
 
+    /**
+     * ping 服务器IP
+     * @param server
+     * @return
+     * @throws Exception
+     */
+    @Transactional
+    @IsTryAgain
+    public Server pingServer(Server server) throws Exception {
+        server = serverService.getById(server.getId());
+        boolean isUnline = false;
+        int timeOut = 5;
+        Long lastSecond = server.getLastSecond();
+        long nextTimeMillis = lastSecond+(server.getMonitorSecond()*1000);
+        if(nextTimeMillis < System.currentTimeMillis()){
+            log.info("=====定时器任务运行中=====ip={}",server.getIp());
+            Ping.savePingLogger(server.getIp(),"logs/monitor/"+ DateUtil.getDays()+"_"+server.getIp()+".log",server.getSendCount(),timeOut);
+            server.setLastSecond(nextTimeMillis);
+            if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),timeOut)){
+                System.out.println("=date:"+LocalDateTime.now()+"ip:"+server.getIp()+" is unline");
+                server.setStatus(2);
+                isUnline=true;
+            }else{
+                server.setStatus(1);
+            }
+            server.setModifyTime(LocalDateTime.now());
+            server.setLastPingTime(LocalDateTime.now());
+            if(!serverService.updateById(server)){
+                log.info("server={}，ip={},正在重试更新", JSON.toJSONString(server),server.getIp());
+                throw new TryAgainException(ApiResultEnum.FAILED);
+            }
+        }
+        if(isUnline){
+            return server;
+        }
+        return null;
+    }
+
+    /**
+     * 10 秒监听，是否有掉线服务器
+     * @return
+     * @throws Exception
+     */
     @Override
     public Result listener() throws Exception {
+        String refresh = (String) redisTemplate.opsForValue().get(refreshKey);
+        if(!StringUtils.isEmpty(refresh)){
+            refresh="0";
+        }else{
+            //5分钟刷新一波
+            redisTemplate.opsForValue().set(refreshKey,"1",5, TimeUnit.MINUTES);
+            refresh="1";
+        }
         //有几台有问题
         String redisKey = "serverip_";
         List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getStatus,2));
@@ -222,8 +283,10 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                 }
             }
         }
-
-        return Result.ok(resultList);
+        Map<String,Object> data = new HashMap<>();
+        data.put("refresh",refresh);
+        data.put("list",resultList);
+        return Result.ok(data);
     }
 
     public void sendEmail(List<Server> unLineList){
@@ -232,8 +295,9 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         Context context = new Context();
         context.setVariable("unLineList", unLineList);
         String emailContent = templateEngine.process("model/emailTemplate", context);
-        String from = "test@qq.com";
+        String from = "1006059906@qq.com";
         List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
+
         if(emailAddressList != null && emailAddressList.size() > 0){
             for (EmailAddress emailAddress:emailAddressList) {
                 String resultKey = redisKey + emailAddress.getToEmailAddress();
@@ -241,7 +305,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                 System.out.println("============value="+value);
                 if (StringUtils.isEmpty(value)) {
                     //加入缓存
-                    redisTemplate.opsForValue().set(resultKey, 1, 10, TimeUnit.MINUTES);
+                    redisTemplate.opsForValue().set(resultKey, "1", 10, TimeUnit.MINUTES);
                     Runnable sendEmailRunable = new Runnable() {
                         @Override
                         public void run() {
@@ -253,7 +317,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                             }
                         }
                     };
-                    executor.execute(sendEmailRunable);
+                    threadPoolTaskExecutor.execute(sendEmailRunable);
                 }
             }
         }

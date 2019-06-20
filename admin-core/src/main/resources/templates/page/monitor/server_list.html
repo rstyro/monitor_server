@@ -51,6 +51,7 @@
                     <th>是否开启声音</th>
                     <th>多久监听,单位:秒</th>
                     <th>状态</th>
+                    <th>上次Ping服务器的时间</th>
                     <th>创建时间</th>
                     <th>更新时间</th>
                     <th>操作</th>
@@ -64,17 +65,22 @@
                           <td th:text="${item.ip }"></td>
                           <td th:text="${item.mark }">备注</td>
                           <td th:text="${item.sendCount }">发包次数</td>
-                          <td th:text="${item.lostCount }">丢包次数</td>
+                          <td>
+                              <div data-toggle="tooltip" data-placement="left" th:text="${item.lostCount }" th:title="|发包${item.sendCount}次，丢包${item.lostCount}次算掉线|"></div>
+                          </td>
                           <td th:switch="${item.isOpenSound }">
                             <span th:case="0" class="label label-warning">关闭</span>
                             <span th:case="1" class="label label-success">开启</span>
                           </td>
-                          <td th:text="${item.monitorSecond }">多久监听一次，（单位：秒）</td>
+                          <td>
+                              <p th:text="${item.monitorSecond }"></p>
+                          </td>
                           <td th:switch="${item.status }">
-                              <span th:case="0" class="label label-warning">未连接</span>
+                              <span th:case="0" class="label label-warning">正在连接</span>
                               <span th:case="1" class="label label-success">正常</span>
                               <span th:case="2" class="label label-danger">掉线</span>
                           </td>
+                        <td><div data-toggle="tooltip" data-placement="left" title="数据是这样算的:  &#13;监听的时间 + ping的时间(默认5秒) * 发包次数" th:text="${#temporals.format(item.lastPingTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
                         <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
                         <td><div th:text="${#temporals.format(item.modifyTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
                     <td>
@@ -144,13 +150,13 @@
                             <div class="form-group">
                                 <label for="sendCount" class="col-sm-2 control-label"> 发包次数</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="lostCount" value="" id="sendCount" placeholder="请输入丢包多少次，算掉线">
+                                    <input type="text" class="form-control" name="lostCount" value="" id="sendCount" placeholder="请输入ping的时候发包多少次">
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="lostCount" class="col-sm-2 control-label"> 丢包次数</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="lostCount" value="" id="lostCount" placeholder="请输入丢包多少次，算掉线">
+                                    <input type="text" class="form-control" name="lostCount" value="" id="lostCount" placeholder="请输入丢包多少次算掉线">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -168,12 +174,24 @@
                                     <input type="text" class="form-control" name="monitorSecond" value="" id="monitorSecond" placeholder="请输入多久监听一次，（单位：秒）">
                                 </div>
                             </div>
+                    <div class="form-group hidden">
+                        <label for="lastSecond" class="col-sm-2 control-label"> lastSecond</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" name="lastSecond" value="" id="lastSecond" placeholder="最后更新的时间">
+                        </div>
+                    </div>
                             <div class="form-group hidden">
-                                <label for="createBy" class="col-sm-2 control-label"> createBy</label>
+                                <label for="version" class="col-sm-2 control-label"> version</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="createBy" value="" id="createBy" placeholder="请输入createBy">
+                                    <input type="text" class="form-control" name="version" value="" id="version" placeholder="请输入version">
                                 </div>
                             </div>
+                        <div class="form-group hidden">
+                            <label for="createBy" class="col-sm-2 control-label"> createBy</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" name="createBy" value="" id="createBy" placeholder="请输入createBy">
+                            </div>
+                        </div>
                             <div class="form-group hidden">
                                 <label for="createTime" class="col-sm-2 control-label"> createTime</label>
                                 <div class="col-sm-10">
@@ -251,19 +269,21 @@
             var isDel = $("#isDel").val();
             var sendCount = $("#sendCount").val();
             var lostCount = $("#lostCount").val();
+            var lastSecond = $("#lastSecond").val();
             var isOpenSound = $("#isOpenSound").val();
             console.log("isOpenSound:",isOpenSound);
             var monitorSecond = $("#monitorSecond").val();
+            var version = $("#version").val();
             var createBy = $("#createBy").val();
             var createTime = $("#createTime").val();
             var modifyBy = $("#modifyBy").val();
             var modifyTime = $("#modifyTime").val();
-            if(checkData(serverName,ip,mark,isDel,sendCount,lostCount,isOpenSound,monitorSecond,createBy,createTime,modifyBy,modifyTime)){
+            if(checkData(serverName,ip,mark,isDel,sendCount,lostCount,lastSecond,isOpenSound,monitorSecond,createBy,createTime,modifyBy,modifyTime)){
                 $.ajax({
                     type:"POST",
                     url:_ctx+url,
                     cache:false,
-                    data:{id:id,status:status,serverName:serverName,ip:ip,mark:mark,isDel:isDel,sendCount:sendCount,lostCount:lostCount,isOpenSound:isOpenSound,monitorSecond:monitorSecond,createBy:createBy,createTime:createTime,modifyBy:modifyBy,modifyTime:modifyTime, time:new Date().getTime()},
+                    data:{id:id,status:status,serverName:serverName,ip:ip,mark:mark,isDel:isDel,sendCount:sendCount,lostCount:lostCount,lastSecond:lastSecond,isOpenSound:isOpenSound,monitorSecond:monitorSecond,version:version,createBy:createBy,createTime:createTime,modifyBy:modifyBy,modifyTime:modifyTime, time:new Date().getTime()},
                     dataType:"json",
                      success:function(data){
                     if(data.status == "200"){
@@ -285,7 +305,9 @@
         //模态框隐藏时回调
         $('#warningModal').on('hide.bs.modal', function() {
                 // ap1.toggle();
-                ap1.pause()
+                ap1.pause();
+                //隐藏的时候刷新一下
+                window.location.href=window.location.href;
             });
         //模态框显示时回调
         $('#warningModal').on('show.bs.modal', function () {
@@ -328,7 +350,7 @@
             if(data.status == "200"){
                 var item = data.data;
                 console.log("item:",item);
-                setData( item.id ,item.status, item.serverName , item.ip , item.mark , item.isDel ,item.sendCount, item.lostCount , item.isOpenSound , item.monitorSecond , item.createBy , item.createTime , item.modifyBy , item.modifyTime )
+                setData( item.id ,item.status, item.serverName , item.ip , item.mark , item.isDel ,item.sendCount, item.lostCount ,item.lastSecond, item.isOpenSound , item.monitorSecond ,item.version, item.createBy , item.createTime , item.modifyBy , item.modifyTime )
             }else{
                 alert(data.message);
             }
@@ -393,7 +415,7 @@
     /**
      *  赋值
       */
-    function setData(  id ,status, serverName , ip , mark , isDel , sendCount,lostCount , isOpenSound , monitorSecond , createBy , createTime , modifyBy , modifyTime ){
+    function setData(  id ,status, serverName , ip , mark , isDel , sendCount,lostCount ,lastSecond, isOpenSound , monitorSecond ,version, createBy , createTime , modifyBy , modifyTime ){
          $("#id").val(id);
          $("#serverName").val(serverName);
          $("#ip").val(ip);
@@ -402,8 +424,10 @@
          $("#isDel").val(isDel);
          $("#sendCount").val(sendCount);
          $("#lostCount").val(lostCount);
+         $("#lastSecond").val(lastSecond);
          $("#isOpenSound").val(isOpenSound);
          $("#monitorSecond").val(monitorSecond);
+         $("#version").val(version);
          $("#createBy").val(createBy);
          $("#createTime").val(createTime);
          $("#modifyBy").val(modifyBy);
@@ -425,7 +449,7 @@
     function getFailedServer(){
         $.get(_ctx+listenerUrl,{t:new Date().getTime()},function(data){
             if(data.status == "200"){
-                var arr = data.data;
+                var arr = data.data.list;
                 var ips = "";
                 if(arr.length > 0 ){
                     for (var i = 0; i < arr.length; i++) {
@@ -434,6 +458,12 @@
                     }
                     ips = ips.substring(0,ips.length-1);
                     showBell(ips);
+                }else{
+                   var refresh =  data.data.refresh;
+                   if(refresh == "1"){
+                       //通过后天看是否刷新页面
+                       window.location.href=window.location.href;
+                   }
                 }
             }else{
                 console.log(data.message);
