@@ -5,7 +5,7 @@ admin:
   name: Admin LRS
   upload:
     root: upload
-    pre: http://localhost:8800/show/
+    pre: http://47.112.136.247/show/
 mybatis-plus:
   mapper-locations:
        - classpath:mapper/*/*.xml
