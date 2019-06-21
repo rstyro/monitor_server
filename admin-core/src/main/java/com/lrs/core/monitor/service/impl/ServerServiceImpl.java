@@ -403,6 +403,17 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         context.setVariable("unLineList", unLineList);
         String emailContent = templateEngine.process("model/emailTemplate", context);
         String from = fromEmail;
+        StringBuilder sb = new StringBuilder();
+        StringBuilder names = new StringBuilder();
+        names.append(":");
+        for(Server server:unLineList){
+            sb.append(server.getIp()).append(",");
+            names.append(server.getServerName()).append("、");
+        }
+        final String ips = sb.toString().substring(0,sb.toString().length() -1);
+        final String serverNames = names.toString();
+
+        //发送邮件
         List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
         if(emailAddressList != null && emailAddressList.size() > 0){
             long time = 60;
@@ -412,11 +423,6 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             } catch (Exception e) {
                log.error("获取发送邮件时间配置出错",e);
             }
-            StringBuilder sb = new StringBuilder();
-            for(Server server:unLineList){
-                sb.append(server.getIp()).append(",");
-            }
-            final String ips = sb.toString().substring(0,sb.toString().length() -1);
             for (EmailAddress emailAddress:emailAddressList) {
                 String resultKey = redisKey + emailAddress.getToEmailAddress();
                 String value = (String) redisTemplate.opsForValue().get(resultKey);

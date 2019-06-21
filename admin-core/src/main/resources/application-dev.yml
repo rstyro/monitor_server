@@ -72,3 +72,9 @@ spring:
             fallback: false
             class: javax.net.ssl.SSLSocketFactory
 
+# 腾讯短信API 接口
+tencent:
+  sms:
+    appId: 1400223915
+    appKey: 3648027dcc6df529d092dae13e92aac6
+    templateId: 358179

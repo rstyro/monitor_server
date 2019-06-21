@@ -1,5 +1,7 @@
 package com.lrs.common.utils.encrypt;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -97,11 +99,67 @@ public class SHA {
             sb.append(byteToHexString(bytes[i]));    
         }    
         return sb.toString();    
-    } 
+    }
+
+    /**
+     * SHA256
+     *
+     * @param content 内容
+     * @param secret
+     */
+    public static String sha256HMAC(String content, String secret) {
+        try {
+            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secret_key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
+            sha256_HMAC.init(secret_key);
+            byte[] bytes = sha256_HMAC.doFinal(content.getBytes());
+
+            StringBuffer buf = new StringBuffer();
+            String stmp;
+            for (int n = 0; bytes != null && n < bytes.length; n++) {
+                stmp = Integer.toHexString(bytes[n] & 0XFF);
+                if (stmp.length() == 1) {
+                    buf.append('0');
+                }
+                buf.append(stmp);
+            }
+            return buf.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * SHA 256 加密
+     * @param content
+     * @return
+     */
+    public static String SHA256(String content) {
+        // 是否是有效字符串
+        String sign = "";
+        if (content != null && content.length() > 0) {
+            try {
+                // SHA 加密开始
+                // 创建加密对象 并傳入加密類型
+                MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                // 传入要加密的字符串
+                messageDigest.update(content.getBytes());
+                // 得到 byte 類型结果
+                sign = byteArrayToHexString(messageDigest.digest());
+            } catch (NoSuchAlgorithmException e) {
+                return null;
+            }
+        }else{
+            return null;
+        }
+        return sign;
+    }
     
     public static void main(String[] args) throws Exception {
 		System.out.println(SHA.encryptSHA("admin", "SHA-1"));
 		System.out.println(SHA.encryptSHA("admin", "SHA"));
 		System.out.println(SHA.encryptSHA("d033e22ae348aeb5660fc2140aec35850c4da997"));
+
+        System.out.println(SHA.SHA256("appkey=5f03a35d00ee52a21327ab048186a2c4&random=7226249334&time=1457336869"));
 	}
 }
