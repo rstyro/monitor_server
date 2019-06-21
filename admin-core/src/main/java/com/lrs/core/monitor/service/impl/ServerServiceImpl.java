@@ -13,6 +13,7 @@ import com.lrs.common.exception.ApiException;
 import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
 import com.lrs.core.monitor.cache.CacheKey;
+import com.lrs.core.monitor.entity.EmailSendDetail;
 import com.lrs.core.monitor.entity.Ping;
 import com.lrs.common.utils.date.DateUtil;
 import com.lrs.core.admin.entity.User;
@@ -82,6 +83,9 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
 
     @Autowired
     private IEmailAddressService emailAddressService;
+
+    @Autowired
+    private IEmailSendDetailService emailSendDetailService;
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -408,6 +412,11 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             } catch (Exception e) {
                log.error("获取发送邮件时间配置出错",e);
             }
+            StringBuilder sb = new StringBuilder();
+            for(Server server:unLineList){
+                sb.append(server.getIp()).append(",");
+            }
+            final String ips = sb.toString().substring(0,sb.toString().length() -1);
             for (EmailAddress emailAddress:emailAddressList) {
                 String resultKey = redisKey + emailAddress.getToEmailAddress();
                 String value = (String) redisTemplate.opsForValue().get(resultKey);
@@ -419,6 +428,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                         public void run() {
                             try {
                                 mailService.sendHtmlMail(from, emailAddress.getToEmailAddress(), "服务器检测掉线警告", emailContent);
+                                saveSendRecord(from, emailAddress.getToEmailAddress(),ips);
                             } catch (Exception e) {
                                 redisTemplate.delete(resultKey);
                                 log.error(e.getMessage(),e);
@@ -429,6 +439,16 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                 }
             }
         }
+    }
 
+    //保存发送邮件记录
+    public void saveSendRecord(String from,String toAddress,String ips)throws Exception{
+        EmailSendDetail emailSendDetail = new EmailSendDetail();
+        emailSendDetail.setContent("服务器报警邮件")
+        .setIps(ips)
+        .setFromEmail(from)
+        .setToEmail(toAddress)
+        .setCreateTime(LocalDateTime.now());
+        emailSendDetailService.save(emailSendDetail);
     }
 }

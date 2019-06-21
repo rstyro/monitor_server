@@ -41,16 +41,13 @@
                 <thead>
                 <tr>
                     <th>序号</th>
-                            <th>id</th>
-                          <th>配置类型</th>
-                          <th>配置项名称</th>
-                          <th>配置项值</th>
-                          <th>配置项描述</th>
-                          <th>是否删除</th>
-                          <th>创建时间</th>
-                            <th>createBy</th>
-                          <th>更新时间</th>
-                            <th>modifyBy</th>
+                    <th>id</th>
+                    <th>配置类型</th>
+                    <th>配置项名称</th>
+                    <th>配置项值</th>
+                    <th>配置项描述</th>
+                    <th>创建时间</th>
+                    <th>更新时间</th>
                     <th>操作</th>
                 </tr>
                 </thead>
@@ -62,11 +59,8 @@
                           <td th:text="${item.configName }">配置项名称</td>
                           <td th:text="${item.configValue }">配置项值</td>
                           <td th:text="${item.configDesc }">配置项描述</td>
-                          <td th:text="${item.isDel }">是否删除</td>
                         <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" >创建时间</div></td>
-                          <td th:text="${item.createBy }"></td>
                         <td><div th:text="${#temporals.format(item.modifyTime, 'yyyy-MM-dd HH:mm:ss') }" >更新时间</div></td>
-                          <td th:text="${item.modifyBy }"></td>
                     <td>
                         <span th:unless="${QX.add == '1' || QX.del == '1' || QX.edit == '1' || QX.query == '1' }" ><i class="fa fa-lock"></i> 无权限</span>
                         <span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>
@@ -103,13 +97,13 @@
                             <div class="form-group">
                                 <label for="configType" class="col-sm-2 control-label"> 配置类型</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="configType" value="" id="configType" placeholder="请输入配置类型">
+                                    <input type="text" class="form-control"  name="configType" value="" id="configType" placeholder="请输入配置类型">
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label for="configName" class="col-sm-2 control-label"> 配置项名称</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" name="configName" value="" id="configName" placeholder="请输入配置项名称">
+                                    <input type="text" class="form-control"  name="configName" value="" id="configName" placeholder="请输入配置项名称">
                                 </div>
                             </div>
                             <div class="form-group">
@@ -124,31 +118,31 @@
                                     <input type="text" class="form-control" name="configDesc" value="" id="configDesc" placeholder="请输入配置项描述">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group hidden">
                                 <label for="isDel" class="col-sm-2 control-label"> 是否删除</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control" name="isDel" value="" id="isDel" placeholder="请输入是否删除">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group hidden">
                                 <label for="createTime" class="col-sm-2 control-label"> 创建时间</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control" name="createTime" value="" id="createTime" placeholder="请输入创建时间">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group hidden">
                                 <label for="createBy" class="col-sm-2 control-label"> createBy</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control" name="createBy" value="" id="createBy" placeholder="请输入createBy">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group hidden">
                                 <label for="modifyTime" class="col-sm-2 control-label"> 更新时间</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control" name="modifyTime" value="" id="modifyTime" placeholder="请输入更新时间">
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group hidden">
                                 <label for="modifyBy" class="col-sm-2 control-label"> modifyBy</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control" name="modifyBy" value="" id="modifyBy" placeholder="请输入modifyBy">

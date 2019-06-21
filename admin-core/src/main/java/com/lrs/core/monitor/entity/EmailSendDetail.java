@@ -41,7 +41,7 @@ public class EmailSendDetail implements Serializable {
 
     private String content;
 
-    private String ip;
+    private String ips;
 
     @TableLogic
     private Integer isDel;
