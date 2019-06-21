@@ -9,12 +9,14 @@ public enum ApiResultEnum {
 	ERROR_RUNTION("503","运行时异常"),
 	ERROR_IO("504","上传文件异常"),
 	ERROR_MOTHODNOTSUPPORT("505","请求方法错误"),
+	ERROR_BY_UPDATE_TRY("506","重试失败"),
 
 
 	//参数
 	PARAMETER_NULL("10001","缺少参数或值为空"),
 	PARAMETER_NOT_FOUND("10002","找不到业务数据"),
 	PARAMETER_IP_EXIST("10003","该IP服务器地址已存在"),
+	UPDATE_IS_FAILD("10004","更新失败了，请重试"),
 
 
 
@@ -30,6 +32,9 @@ public enum ApiResultEnum {
 
 
 	FILE_IS_NULL("40001","文件为空"),
+
+
+	CONFIG_IS_EXIST("50001","配置已存在"),
 	;
 	
 	private String message;

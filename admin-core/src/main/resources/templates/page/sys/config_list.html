@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head th:include="include/css-head :: css-head">
+</head>
+<style>
+    textarea{
+        width:100%;
+        height:100px;
+    }
+</style>
+<body>
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        <small></small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="#"><i class="fa fa-dashboard"></i> 系统管理</a></li>
+        <li class="active">列表管理</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box">
+        <div class="box-header">
+            <h3 class="box-title">列表页</h3>
+            <br><br>
+            <div class="search">
+                <div class="input-group" style="float: right;width: 300px;">
+                    <input type="text" class="form-control" id="keyword" th:value="${keyword }" placeholder="请输入关键字">
+                    <span class="input-group-addon searcher" style="cursor:pointer;"><i class="fa fa-search"></i> 搜素</span>
+                </div>
+            </div>
+            <button th:onclick="add();" th:if="${QX.add == '1' && QX.query == '1' }" class="btn btn-success btn-sm" ><i class="fa fa-plus"></i> &nbsp;&nbsp;新增</button>
+        </div>
+        <!-- /.box-header -->
+        <div class="box-body">
+            <table id="roleList" class="table table-bordered table-striped">
+                <thead>
+                <tr>
+                    <th>序号</th>
+                            <th>id</th>
+                          <th>配置类型</th>
+                          <th>配置项名称</th>
+                          <th>配置项值</th>
+                          <th>配置项描述</th>
+                          <th>是否删除</th>
+                          <th>创建时间</th>
+                            <th>createBy</th>
+                          <th>更新时间</th>
+                            <th>modifyBy</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${QX.query == '1' }" th:each="item,stat :${list.data.records }" >
+                    <td th:text="${stat.count}">1</td>
+                          <td th:text="${item.id }"></td>
+                          <td th:text="${item.configType }">配置类型</td>
+                          <td th:text="${item.configName }">配置项名称</td>
+                          <td th:text="${item.configValue }">配置项值</td>
+                          <td th:text="${item.configDesc }">配置项描述</td>
+                          <td th:text="${item.isDel }">是否删除</td>
+                        <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" >创建时间</div></td>
+                          <td th:text="${item.createBy }"></td>
+                        <td><div th:text="${#temporals.format(item.modifyTime, 'yyyy-MM-dd HH:mm:ss') }" >更新时间</div></td>
+                          <td th:text="${item.modifyBy }"></td>
+                    <td>
+                        <span th:unless="${QX.add == '1' || QX.del == '1' || QX.edit == '1' || QX.query == '1' }" ><i class="fa fa-lock"></i> 无权限</span>
+                        <span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>
+                        <span data-toggle="tooltip" data-placement="right" title="删除" th:if="${QX.del == '1' }" class="btn btn-xs btn-danger"  th:data-id="${item.id }" th:onclick="del(this.getAttribute('data-id'));"><i class="fa fa-trash-o"></i></span>
+                    </td>
+                </tr>
+                <tr th:unless="${QX.query == '1' }" >
+                    <td colspan="12" rowspan="1" align="center">
+                        <h2>您无权限查看该页面</h2>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+    <div style="max-width:800px;margin:0 auto;">
+        <div id="kkpager"></div>
+    </div>
+</section>
+
+<div class="modal fade" id="itemModal" tabindex="-1" role="dialog"
+     aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="itemModelHead">添加</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal" role="form">
+                         <input type="hidden" name="id" id="id" value="0"/>
+                    <input type="hidden" name="actionurl" id="actionurl" value="/"/>
+                            <div class="form-group">
+                                <label for="configType" class="col-sm-2 control-label"> 配置类型</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="configType" value="" id="configType" placeholder="请输入配置类型">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="configName" class="col-sm-2 control-label"> 配置项名称</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="configName" value="" id="configName" placeholder="请输入配置项名称">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="configValue" class="col-sm-2 control-label"> 配置项值</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="configValue" value="" id="configValue" placeholder="请输入配置项值">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="configDesc" class="col-sm-2 control-label"> 配置项描述</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="configDesc" value="" id="configDesc" placeholder="请输入配置项描述">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="isDel" class="col-sm-2 control-label"> 是否删除</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="isDel" value="" id="isDel" placeholder="请输入是否删除">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="createTime" class="col-sm-2 control-label"> 创建时间</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="createTime" value="" id="createTime" placeholder="请输入创建时间">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="createBy" class="col-sm-2 control-label"> createBy</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="createBy" value="" id="createBy" placeholder="请输入createBy">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="modifyTime" class="col-sm-2 control-label"> 更新时间</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="modifyTime" value="" id="modifyTime" placeholder="请输入更新时间">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="modifyBy" class="col-sm-2 control-label"> modifyBy</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" name="modifyBy" value="" id="modifyBy" placeholder="请输入modifyBy">
+                                </div>
+                            </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-success" id="submitBtn" >添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script th:src="@{/static/bower_components/jquery/dist/jquery.min.js}"></script>
+<script th:src="@{/static/bower_components/bootstrap/dist/js/bootstrap.min.js}"></script>
+<!-- AdminLTE App -->
+<script th:src="@{/static/dist/js/adminlte.min.js}"></script>
+<script th:src="@{/static/js/common.js}"></script>
+<script th:src="@{/static/page/src/kkpager.js}"></script>
+<script th:inline="javascript">
+    //init
+    $(function(){
+        var pageNo = getParameter('pageNo');
+        if(!pageNo){
+            pageNo = 1;
+        }
+        //生成分页
+        kkpager.generPageHtml({
+            pno : [[${list.data.current }]],
+            //总页码
+            total : [[${list.data.pages }]],
+            //总数据条数
+            totalRecords : [[${list.data.total }]],
+            mode : 'click',//默认值是link，可选link或者click
+            click : function(n){
+                //手动选中按钮
+                this.selectPage(n);
+                skipPage(n);
+                return false;
+            }
+        });
+
+        //提交按钮
+        $("#submitBtn").click(function(){
+            var url = $("input[name='actionurl']").val();
+            var id = $("#id").val();
+            var configType = $("#configType").val();
+            var configName = $("#configName").val();
+            var configValue = $("#configValue").val();
+            var configDesc = $("#configDesc").val();
+            var isDel = $("#isDel").val();
+            var createTime = $("#createTime").val();
+            var createBy = $("#createBy").val();
+            var modifyTime = $("#modifyTime").val();
+            var modifyBy = $("#modifyBy").val();
+            if(checkData(configType,configName,configValue,configDesc,isDel,createTime,createBy,modifyTime,modifyBy)){
+                $.ajax({
+                    type:"POST",
+                    url:_ctx+url,
+                    cache:false,
+                    data:{id:id,configType:configType,configName:configName,configValue:configValue,configDesc:configDesc,isDel:isDel,createTime:createTime,createBy:createBy,modifyTime:modifyTime,modifyBy:modifyBy, time:new Date().getTime()},
+                    dataType:"json",
+                     success:function(data){
+                    if(data.status == "200"){
+                        window.location.href=window.location.href;
+                    }else{
+                        alert(data.message);
+                    }
+                }
+            });
+                $("#itemModal").modal("hide");
+            }
+
+        });
+    });
+    var listUrl = "/sys/config/list";
+    var editUrl = "/sys/config/edit";
+    var addUrl = "/sys/config/add";
+    var delUrl = "/sys/config/del";
+    var queryUrl = "/sys/config/query";
+
+    //跳转页面
+    function  skipPage(pageNo) {
+        var keyword = $("#keyword").val();
+        window.location.href=_ctx+listUrl+"?keyword="+keyword+"&pageNo="+pageNo;
+    }
+
+    /**
+     * 新增
+     * */
+    function add(){
+        $("input[name='actionurl']").val(addUrl);
+        $("#modelHead").text("新增");
+        $("#submitBtn").text("新增");
+        setData("","","","","","","","","","");
+        $("#itemModal").modal("show");
+    }
+    /**
+     * 编辑
+     *
+     * */
+    function edit(id){
+        $("#modelHead").text("编辑");
+        $("#submitBtn").text("编辑");
+        $("input[name='actionurl']").val(editUrl);
+        $.get(_ctx+queryUrl,{t:new Date().getTime(),id:id},function(data){
+            console.log("data:",data);
+            if(data.status == "200"){
+                var item = data.data;
+                console.log("item:",item);
+                setData( item.id , item.configType , item.configName , item.configValue , item.configDesc , item.isDel , item.createTime , item.createBy , item.modifyTime , item.modifyBy )
+            }else{
+                alert(data.message);
+            }
+        })
+        $("#itemModal").modal("show");
+    }
+
+    /**
+     * 删除
+     * */
+    function del(id){
+        if(confirm("您确定要删除这条记录吗？"))
+        $.post(_ctx+delUrl,{t:new Date().getTime(),id:id},function(data){
+            if(data.status == "200"){
+                window.location.href=window.location.href;
+            }else{
+                alert(data.message);
+            }
+        });
+    }
+
+    /**
+     * 校验参数
+     * @returns {boolean}
+     */
+    function checkData(configType,configName,configValue,configDesc,isDel,createTime,createBy,modifyTime,modifyBy){
+            if(configType == ""){
+                alert("配置类型不能为空");
+                $("input[name='configType']").focus();
+                return false;
+             }
+            if(configName == ""){
+                alert("配置项名称不能为空");
+                $("input[name='configName']").focus();
+                return false;
+             }
+            if(configValue == ""){
+                alert("配置项值不能为空");
+                $("input[name='configValue']").focus();
+                return false;
+             }
+            if(configDesc == ""){
+                alert("配置项描述不能为空");
+                $("input[name='configDesc']").focus();
+                return false;
+             }
+            if(isDel == ""){
+                alert("是否删除不能为空");
+                $("input[name='isDel']").focus();
+                return false;
+             }
+            if(createBy == ""){
+                alert("createBy不能为空");
+                $("input[name='createBy']").focus();
+                return false;
+             }
+            if(modifyBy == ""){
+                alert("modifyBy不能为空");
+                $("input[name='modifyBy']").focus();
+                return false;
+             }
+
+        return true;
+    }
+
+    /**
+     *  赋值
+      */
+    function setData(  id , configType , configName , configValue , configDesc , isDel , createTime , createBy , modifyTime , modifyBy ){
+         $("#id").val(id);
+         $("#configType").val(configType);
+         $("#configName").val(configName);
+         $("#configValue").val(configValue);
+         $("#configDesc").val(configDesc);
+         $("#isDel").val(isDel);
+         $("#createTime").val(createTime);
+         $("#createBy").val(createBy);
+         $("#modifyTime").val(modifyTime);
+         $("#modifyBy").val(modifyBy);
+    }
+</script>
+</body>
+</html>

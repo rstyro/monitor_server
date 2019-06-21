@@ -12,6 +12,7 @@ import com.lrs.common.dto.PageDTO;
 import com.lrs.common.exception.ApiException;
 import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
+import com.lrs.core.monitor.cache.CacheKey;
 import com.lrs.core.monitor.entity.Ping;
 import com.lrs.common.utils.date.DateUtil;
 import com.lrs.core.admin.entity.User;
@@ -23,12 +24,18 @@ import com.lrs.core.monitor.mapper.ServerMapper;
 import com.lrs.core.monitor.service.IEmailAddressService;
 import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.core.monitor.service.IServerService;
+import com.lrs.core.sys.entity.Config;
+import com.lrs.core.sys.enums.ConfigName;
+import com.lrs.core.sys.enums.ConfigType;
+import com.lrs.core.sys.service.IConfigService;
+import com.sun.org.apache.xpath.internal.operations.Mod;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.thymeleaf.TemplateEngine;
@@ -77,15 +84,16 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     private IEmailAddressService emailAddressService;
 
     @Autowired
-    private IEmailSendDetailService emailSendDetailService;
-
-    @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @Autowired
     private IServerService serverService;
 
+    @Autowired
+    private IConfigService configService;
+
     private final static String refreshKey = "refresh";
+    private final static  int timeOut = 5;;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -123,21 +131,36 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             item.setCreateTime(LocalDateTime.now());
         }
         this.save(item);
+        int modResultNumber = (int) (item.getId() % CacheKey.MOD_NUMBER);
+        //刷新缓存
+        refreshModCache(modResultNumber);
         return Result.ok();
     }
+
 
     @Override
     public Result edit(Server item, User user) throws Exception {
         System.out.println("item======="+item);
         item.setModifyBy(user.getUserId());
         item.setModifyTime(LocalDateTime.now());
-        this.updateById(item);
+        item.setStatus(0);
+        if(!this.updateById(item)){
+            throw new ApiException(ApiResultEnum.UPDATE_IS_FAILD);
+        }
+        int modResultNumber = (int) (item.getId() % CacheKey.MOD_NUMBER);
+        //刷新缓存
+        refreshModCache(modResultNumber);
+        refreshUnLineCache();
        return Result.ok();
     }
 
     @Override
     public Result del(Long id, User user) throws Exception {
         this.removeById(id);
+        int modResultNumber = (int) (id % CacheKey.MOD_NUMBER);
+        //刷新缓存
+        refreshModCache(modResultNumber);
+        refreshUnLineCache();
         return Result.ok();
     }
 
@@ -147,6 +170,65 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
          return Result.ok(item);
     }
 
+    /**
+     * 刷新取模列表缓存
+     * @param resultNum
+     */
+    public synchronized List<Server> refreshModCache(int resultNum){
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})={1}",CacheKey.MOD_NUMBER,resultNum));
+        if(serverList == null){
+            serverList = new ArrayList<>();
+        }
+        log.info("==更新取模列表=resultNum={},list.size={}",resultNum,serverList.size());
+        redisTemplate.opsForValue().set(CacheKey.MOD_LIST_+resultNum,serverList,5,TimeUnit.DAYS);
+        return serverList;
+    }
+
+    /**
+     * 刷新掉线列表缓存
+     */
+    public synchronized List<Server> refreshUnLineCache(){
+        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getStatus,2));
+        if(serverList == null){
+            serverList = new ArrayList<>();
+        }
+        log.info("==更新掉线列表==list={}",JSON.toJSONString(serverList));
+        redisTemplate.opsForValue().set(CacheKey.UN_LINE_LIST,serverList,5,TimeUnit.DAYS);
+        return serverList;
+    }
+
+    /**
+     * 获取掉线缓存列表
+     * @return
+     */
+    public  List<Server> getUnlineCache(){
+        return (List<Server>) redisTemplate.opsForValue().get(CacheKey.UN_LINE_LIST);
+    }
+
+    //检测掉线列表状态是否恢复
+    public void checkUnlineList(List<String> ips){
+        List<Server> servers = getUnlineCache();
+        int count = 0;
+        for(String ip:ips){
+            for(Server server:servers){
+                if(server.getIp().equalsIgnoreCase(ip)){
+                    count=count+1;
+                    break;
+                }
+            }
+        }
+        if(count>0){
+            refreshUnLineCache();
+        }
+    }
+
+    /**
+     * 下载今日日志
+     * @param id
+     * @param request
+     * @param response
+     * @throws Exception
+     */
     @Override
     public void downloadLogger(Long id, HttpServletRequest request, HttpServletResponse response) throws Exception {
         Server server = this.getById(id);
@@ -193,9 +275,15 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     }
 
     @Transactional
-    public void monitor(int modNumber,int resultNum) throws Exception {
-        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})={1}",modNumber,resultNum));
+    public void monitor(int resultModNumber) throws Exception {
+//        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})={1}",CacheKey.MOD_NUMBER,resultModNumber));
+        List<Server> serverList = (List<Server>) redisTemplate.opsForValue().get(CacheKey.MOD_LIST_+resultModNumber);
+        if(serverList == null){
+            serverList = refreshModCache(resultModNumber);
+        }
         List<Server> unLineList = new ArrayList<>();
+        //收集正常状态的ip列表
+        List<String> ips = new ArrayList<>();
         for(Server server:serverList){
             Callable<Server> serverCallable = new Callable<Server>() {
                 @Override
@@ -206,12 +294,18 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             Future<Server> serverFuture = threadPoolTaskExecutor.submit(serverCallable);
             Server resultServer = serverFuture.get();
             if(resultServer != null){
+                refreshUnLineCache();
                 unLineList.add(resultServer);
+            }else{
+                ips.add(server.getIp());
             }
         }
         if(unLineList.size() > 0){
             //发送邮件
             sendEmail(unLineList);
+        }
+        if(ips.size()>0){
+            checkUnlineList(ips);
         }
     }
 
@@ -226,24 +320,24 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     public Server pingServer(Server server) throws Exception {
         server = serverService.getById(server.getId());
         boolean isUnline = false;
-        int timeOut = 5;
         Long lastSecond = server.getLastSecond();
         long nextTimeMillis = lastSecond+(server.getMonitorSecond()*1000);
         if(nextTimeMillis < System.currentTimeMillis()){
-            log.info("=====定时器任务运行中=====ip={}",server.getIp());
+            log.info("=====ping_ip={}",server.getIp());
             Ping.savePingLogger(server.getIp(),"logs/monitor/"+ DateUtil.getDays()+"_"+server.getIp()+".log",server.getSendCount(),timeOut);
             server.setLastSecond(nextTimeMillis);
             if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),timeOut)){
-                System.out.println("=date:"+LocalDateTime.now()+"ip:"+server.getIp()+" is unline");
+                log.info("=date={},ip={} is unline",LocalDateTime.now(),server.getIp());
                 server.setStatus(2);
                 isUnline=true;
             }else{
                 server.setStatus(1);
+
             }
             server.setModifyTime(LocalDateTime.now());
             server.setLastPingTime(LocalDateTime.now());
             if(!serverService.updateById(server)){
-                log.info("server={}，ip={},正在重试更新", JSON.toJSONString(server),server.getIp());
+                log.info("==ip={},server={},正在重试更新",server.getIp(), JSON.toJSONString(server));
                 throw new TryAgainException(ApiResultEnum.FAILED);
             }
         }
@@ -254,7 +348,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     }
 
     /**
-     * 10 秒监听，是否有掉线服务器
+     * 监听，是否有掉线服务器
      * @return
      * @throws Exception
      */
@@ -269,16 +363,23 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             refresh="1";
         }
         //有几台有问题
-        String redisKey = "serverip_";
-        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().eq(Server::getStatus,2));
+        List<Server> serverList = getUnlineCache();
         List<Server> resultList = new ArrayList<>();
         if(serverList == null){
             serverList = new ArrayList<>();
+            refreshUnLineCache();
         }else{
+            long time = 5;
+            try {
+                Config config = configService.getConfigByCache(ConfigType.TIME, ConfigName.SEND_WARNING);
+                time = Long.valueOf(config.getConfigValue());
+            } catch (Exception e) {
+                log.error("获取页面警告时间配置出错",e);
+            }
             for(Server server:serverList){
-                String value = (String) redisTemplate.opsForValue().get(redisKey+server.getIp());
+                String value = (String) redisTemplate.opsForValue().get(CacheKey.SERVERIP_+server.getIp());
                 if(StringUtils.isEmpty(value)){
-                    redisTemplate.opsForValue().set(redisKey+server.getIp(),"1",5, TimeUnit.MINUTES);
+                    redisTemplate.opsForValue().set(CacheKey.SERVERIP_+server.getIp(),"1",time, TimeUnit.MINUTES);
                     if(server.getIsOpenSound().equals(1)){
                         resultList.add(server);
                     }
@@ -291,7 +392,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         return Result.ok(data);
     }
 
-    public void sendEmail(List<Server> unLineList){
+    public void sendEmail(List<Server> unLineList) {
         //创建邮件正文
         String redisKey = "email_adress_";
         Context context = new Context();
@@ -299,15 +400,20 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         String emailContent = templateEngine.process("model/emailTemplate", context);
         String from = fromEmail;
         List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
-
         if(emailAddressList != null && emailAddressList.size() > 0){
+            long time = 60;
+            try {
+                Config config = configService.getConfigByCache(ConfigType.TIME, ConfigName.SEND_EMAIL);
+                time = Long.valueOf(config.getConfigValue());
+            } catch (Exception e) {
+               log.error("获取发送邮件时间配置出错",e);
+            }
             for (EmailAddress emailAddress:emailAddressList) {
                 String resultKey = redisKey + emailAddress.getToEmailAddress();
                 String value = (String) redisTemplate.opsForValue().get(resultKey);
-                System.out.println("============value="+value);
                 if (StringUtils.isEmpty(value)) {
-                    //加入缓存
-                    redisTemplate.opsForValue().set(resultKey, "1", 10, TimeUnit.MINUTES);
+                    //加入缓存,10 分钟期限
+                    redisTemplate.opsForValue().set(resultKey, "1", time, TimeUnit.MINUTES);
                     Runnable sendEmailRunable = new Runnable() {
                         @Override
                         public void run() {

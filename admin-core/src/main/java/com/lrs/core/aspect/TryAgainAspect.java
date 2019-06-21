@@ -52,7 +52,7 @@ public class TryAgainAspect {
 				if (numAttempts > maxRetries) {
 					//log failure information, and throw exception
 //					如果大于 默认的重试机制 次数，我们这回就真正的抛出去了
-					throw new ApiException(ApiResultEnum.ERROR);
+					throw new ApiException(ApiResultEnum.ERROR_BY_UPDATE_TRY);
 				}else{
 					//如果 没达到最大的重试次数，将再次执行
 					System.out.println("=====正在重试====="+numAttempts+"次");

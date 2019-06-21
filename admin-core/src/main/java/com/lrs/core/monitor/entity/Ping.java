@@ -67,7 +67,6 @@ public class Ping {
             int connectedCount = 0;
             String line = null;
             while ((line = in.readLine()) != null) {
-                logger.info("ping line={}",line);
                 if(!StringUtils.isEmpty(line)){
                     connectedCount += getCheckResult(line);
                 }
@@ -122,23 +121,8 @@ public class Ping {
      */
     public static boolean isUnline(String ipAddress,int lostCount, int pingTimes, int timeOut) {
         int pingCount = getPingCount(ipAddress, pingTimes, timeOut);
-        System.out.println("pingTimes - pingCount="+(pingTimes - pingCount));
-        System.out.println("lostCount="+lostCount);
-        System.out.println("ipAddress="+ipAddress+"isUnline="+((pingTimes - pingCount) > lostCount));
+        logger.info("==Ping {} 发包次数={},返回的正常次数={},实际丢包次数={},目标丢包次数={}",ipAddress,pingTimes,pingCount,(pingTimes-pingCount),lostCount);
         if((pingTimes - pingCount) >= lostCount){
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isUnline(String ipAddress,int lostCount) {
-        int pingTimes=10;
-        int timeOut=5;
-        int pingCount = getPingCount(ipAddress, pingTimes, timeOut);
-        System.out.println("pingTimes - pingCount="+(pingTimes - pingCount));
-        System.out.println("lostCount="+lostCount);
-        System.out.println("ipAddress="+ipAddress+"isUnline="+((pingTimes - pingCount) > lostCount));
-        if(pingTimes - pingCount > lostCount){
             return true;
         }
         return false;

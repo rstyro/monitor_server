@@ -14,13 +14,23 @@ public class MonitorTimer {
 
     @Autowired
     private IServerService serverService;
-    private static final int modNumber =10;
+
+
+    @Scheduled(fixedDelay = 5*1000)
+    public void pingMod0(){
+        try {
+            log.info("===============0定时任务执行时间点："+ LocalDateTime.now());
+            serverService.monitor(0);
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+        }
+    }
 
     @Scheduled(fixedDelay = 5*1000)
     public void pingMod1(){
         try {
             log.info("===============1定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,1);
+            serverService.monitor(1);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -29,7 +39,7 @@ public class MonitorTimer {
     public void pingMod2(){
         try {
             log.info("===============2定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,2);
+            serverService.monitor(2);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -38,7 +48,7 @@ public class MonitorTimer {
     public void pingMod3(){
         try {
             log.info("===============3定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,3);
+            serverService.monitor(3);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -47,7 +57,7 @@ public class MonitorTimer {
     public void pingMod4(){
         try {
             log.info("===============4定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,4);
+            serverService.monitor(4);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -56,7 +66,7 @@ public class MonitorTimer {
     public void pingMod5(){
         try {
             log.info("===============5定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,5);
+            serverService.monitor(5);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -65,7 +75,7 @@ public class MonitorTimer {
     public void pingMod6(){
         try {
             log.info("===============6定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,6);
+            serverService.monitor(6);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -74,7 +84,7 @@ public class MonitorTimer {
     public void pingMod7(){
         try {
             log.info("===============7定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,7);
+            serverService.monitor(7);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -83,7 +93,7 @@ public class MonitorTimer {
     public void pingMod8(){
         try {
             log.info("===============8定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,8);
+            serverService.monitor(8);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
@@ -92,19 +102,11 @@ public class MonitorTimer {
     public void pingMod9(){
         try {
             log.info("===============9定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,9);
+            serverService.monitor(9);
         }catch (Exception e){
             log.error(e.getMessage(),e);
         }
     }
-    @Scheduled(fixedDelay = 5*1000)
-    public void pingMod10(){
-        try {
-            log.info("===============0定时任务执行时间点："+ LocalDateTime.now());
-            serverService.monitor(modNumber,0);
-        }catch (Exception e){
-            log.error(e.getMessage(),e);
-        }
-    }
+
 
 }
