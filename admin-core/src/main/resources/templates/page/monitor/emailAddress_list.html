@@ -41,22 +41,27 @@
                 <thead>
                 <tr>
                     <th>序号</th>
-                            <th>ID</th>
-                            <th>昵称</th>
-                            <th>备注</th>
-                            <th>接收地址</th>
-                            <th>创建时间</th>
+                    <th>ID</th>
+                    <th>昵称</th>
+                    <th>类型</th>
+                    <th>接收地址</th>
+                    <th>备注</th>
+                    <th>创建时间</th>
                     <th>操作</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${QX.query == '1' }" th:each="item,stat :${list.data.records }" >
                     <td th:text="${stat.count}">1</td>
-                          <td th:text="${item.id }"></td>
-                          <td th:text="${item.nickName }"></td>
-                          <td th:text="${item.mark }"></td>
-                          <td th:text="${item.toEmailAddress }"></td>
-                        <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
+                    <td th:text="${item.id }"></td>
+                    <td th:text="${item.nickName }"></td>
+                    <td th:switch="${item.type }">
+                        <span th:case="1">邮箱</span>
+                        <span th:case="2">手机</span>
+                    </td>
+                    <td th:text="${item.toAddress }"></td>
+                    <td th:text="${item.mark }"></td>
+                    <td><div th:text="${#temporals.format(item.createTime, 'yyyy-MM-dd HH:mm:ss') }" ></div></td>
                     <td>
                         <span th:unless="${QX.add == '1' || QX.del == '1' || QX.edit == '1' || QX.query == '1' }" ><i class="fa fa-lock"></i> 无权限</span>
                         <span data-toggle="tooltip" data-placement="left" title="修改" th:if="${QX.edit == '1' }"  th:data-id="${item.id }" class="btn btn-xs btn-info" th:onclick="edit(this.getAttribute('data-id'));"><i class="fa fa-edit"></i></span>
@@ -103,9 +108,18 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="toEmailAddress" class="col-sm-2 control-label"> 接收地址</label>
+                                <label for="type" class="col-sm-2 control-label"> 接收类型</label>
                                 <div class="col-sm-10">
-                                    <input type="email" class="form-control" name="toEmailAddress" value="" id="toEmailAddress" placeholder="请输入服务报警时，接收的邮件地址">
+                                    <select name="type" id="type" class="form-control">
+                                        <option value="1">邮箱</option>
+                                        <option value="2">手机</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="toAddress" class="col-sm-2 control-label"> 接收地址</label>
+                                <div class="col-sm-10">
+                                    <input type="email" class="form-control" name="toAddress" value="" id="toAddress" placeholder="请输入服务报警时，接收的地址">
                                 </div>
                             </div>
                             <div class="form-group hidden">
@@ -165,16 +179,18 @@
             var url = $("input[name='actionurl']").val();
             var id = $("#id").val();
             var nickName = $("#nickName").val();
+            var type = $("#type").val();
             var mark = $("#mark").val();
-            var toEmailAddress = $("#toEmailAddress").val();
+            var toAddress = $("#toAddress").val();
             var createBy = $("#createBy").val();
             var createTime = $("#createTime").val();
-            if(checkData(nickName,mark,toEmailAddress,createBy,createTime)){
+            console.log("type",type);
+            if(checkData(type,nickName,mark,toAddress,createBy,createTime)){
                 $.ajax({
                     type:"POST",
                     url:_ctx+url,
                     cache:false,
-                    data:{id:id,nickName:nickName,mark:mark,toEmailAddress:toEmailAddress,createBy:createBy,createTime:createTime, time:new Date().getTime()},
+                    data:{id:id,type:type,nickName:nickName,mark:mark,toAddress:toAddress,createBy:createBy,createTime:createTime, time:new Date().getTime()},
                     dataType:"json",
                      success:function(data){
                     if(data.status == "200"){
@@ -208,7 +224,7 @@
         $("input[name='actionurl']").val(addUrl);
         $("#modelHead").text("新增");
         $("#submitBtn").text("新增");
-        setData("","","","","","");
+        setData("",1,"","","","","");
         $("#itemModal").modal("show");
     }
     /**
@@ -224,7 +240,7 @@
             if(data.status == "200"){
                 var item = data.data;
                 console.log("item:",item);
-                setData( item.id , item.nickName , item.mark , item.toEmailAddress , item.createBy , item.createTime )
+                setData( item.id ,item.type, item.nickName , item.mark , item.toAddress , item.createBy , item.createTime )
             }else{
                 alert(data.message);
             }
@@ -250,16 +266,21 @@
      * 校验参数
      * @returns {boolean}
      */
-    function checkData(nickName,mark,toEmailAddress,createBy,createTime){
+    function checkData(type,nickName,mark,toAddress,createBy,createTime){
             if(nickName == ""){
-                alert("nickName不能为空");
+                alert("昵称不能为空");
                 $("input[name='nickName']").focus();
                 return false;
              }
+             if(type == ""){
+                alert("类型不能为空");
+                $("#type").focus();
+                return false;
+             }
 
-            if(toEmailAddress == ""){
-                alert("toEmailAddress不能为空");
-                $("input[name='toEmailAddress']").focus();
+            if(toAddress == ""){
+                alert("接收地址不能为空");
+                $("input[name='toAddress']").focus();
                 return false;
              }
 
@@ -270,11 +291,12 @@
     /**
      *  赋值
       */
-    function setData(  id , nickName , mark , toEmailAddress , createBy , createTime ){
+    function setData(  id ,type, nickName , mark , toAddress , createBy , createTime ){
          $("#id").val(id);
+         $("#type").val(type);
          $("#nickName").val(nickName);
          $("#mark").val(mark);
-         $("#toEmailAddress").val(toEmailAddress);
+         $("#toAddress").val(toAddress);
          $("#createBy").val(createBy);
          $("#createTime").val(createTime);
     }

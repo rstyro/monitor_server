@@ -27,6 +27,7 @@ public class SmsService {
      * @throws Exception
      */
     public SmsSingleSenderResult sendSmsById(String phoneNumber,ArrayList<String> params) throws Exception{
+        //检测到服务器{1}ip{2}掉线，请值班人员尽快查明原因并处理。
         SmsSingleSender ssender = new SmsSingleSender(appid, appkey);
         SmsSingleSenderResult result = ssender.sendWithParam("86",phoneNumber, templateId, params, "", "", "");  // 签名参数未提供或者为空时，会使用默认签名发送短信
         return result;

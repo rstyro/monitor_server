@@ -1,7 +1,7 @@
 package com.lrs.core.monitor.controller;
 import com.lrs.common.annotation.Permission;
 import com.lrs.common.annotation.PermissionType;
-import com.lrs.core.monitor.entity.EmailAddress;
+import com.lrs.core.monitor.entity.ReceiveAddress;
 import com.lrs.core.monitor.service.IEmailAddressService;
 import com.lrs.common.dto.PageDTO;
 import com.lrs.core.base.BaseController;
@@ -41,7 +41,7 @@ public class EmailAddressController extends BaseController {
     @PostMapping(value="/add")
     @ResponseBody
     @Permission(url = qxurl,type = PermissionType.ADD)
-    public Object add(EmailAddress item) throws Exception {
+    public Object add(ReceiveAddress item) throws Exception {
         item.setId(null);
         return emailAddressService.add(item,this.getSession());
     }
@@ -49,7 +49,7 @@ public class EmailAddressController extends BaseController {
     @PostMapping(value="/edit")
     @ResponseBody
     @Permission(url = qxurl,type = PermissionType.EDIT)
-    public Object edit(EmailAddress item) throws Exception {
+    public Object edit(ReceiveAddress item) throws Exception {
         return emailAddressService.edit(item,this.getSession());
     }
 

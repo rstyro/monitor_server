@@ -9,7 +9,7 @@ import com.lrs.core.admin.entity.Menu;
 import com.lrs.core.admin.entity.User;
 import com.lrs.core.admin.service.ILoginService;
 import com.lrs.core.base.BaseController;
-import com.lrs.core.monitor.entity.EmailSendDetail;
+import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
 import com.lrs.core.monitor.entity.Server;
 import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.core.monitor.service.IServerService;
@@ -70,7 +70,7 @@ public class LoginController extends BaseController {
             }
             int normalCount = serverService.count(new LambdaQueryWrapper<Server>().eq(Server::getStatus,1));
             int unLineCount = serverService.count(new LambdaQueryWrapper<Server>().eq(Server::getStatus,2));
-            int sendMailCount = emailSendDetailService.count(new LambdaQueryWrapper<EmailSendDetail>());
+            int sendMailCount = emailSendDetailService.count(new LambdaQueryWrapper<ReceiveAddressSendDetail>().eq(ReceiveAddressSendDetail::getType,1));
             model.addAttribute("normalCount", normalCount);
             model.addAttribute("unLineCount", unLineCount);
             model.addAttribute("sendMailCount", sendMailCount);

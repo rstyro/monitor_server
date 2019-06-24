@@ -1,5 +1,7 @@
 package com.lrs.core.monitor.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
@@ -22,22 +24,28 @@ import org.springframework.format.annotation.DateTimeFormat;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("monitor_email_send_detail")
-public class EmailSendDetail implements Serializable {
+@TableName("monitor_receive_address_send_detail")
+public class ReceiveAddressSendDetail implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    /**
+     * 1 - 邮箱，2 -- 手机
+     */
+    private Integer type;
 
     /**
      * 邮件发送地址
      */
-    private String fromEmail;
+    private String fromAddress;
 
     /**
      * 发送给谁
      */
-    private String toEmail;
+    private String toAddress;
 
     private String content;
 

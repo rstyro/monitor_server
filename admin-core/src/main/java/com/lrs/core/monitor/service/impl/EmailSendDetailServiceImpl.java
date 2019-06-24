@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
-import org.springframework.util.StringUtils;
+import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
+
 import javax.servlet.http.HttpSession;
 
-import com.lrs.core.monitor.entity.EmailSendDetail;
 import com.lrs.core.monitor.mapper.EmailSendDetailMapper;
 import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -26,37 +26,37 @@ import java.time.LocalDateTime;
  * @since 2019-06-19
  */
 @Service
-public class EmailSendDetailServiceImpl extends ServiceImpl<EmailSendDetailMapper, EmailSendDetail> implements IEmailSendDetailService{
+public class EmailSendDetailServiceImpl extends ServiceImpl<EmailSendDetailMapper, ReceiveAddressSendDetail> implements IEmailSendDetailService{
 
     @Override
     public Result getList(PageDTO dto) throws Exception {
-        IPage<EmailSendDetail> page = new Page<>();
+        IPage<ReceiveAddressSendDetail> page = new Page<>();
         if(dto.getPageNo() != null){
             page.setCurrent(dto.getPageNo());
         }
         if(dto.getPageSize() != null){
             page.setSize(dto.getPageSize());
         }
-        QueryWrapper<EmailSendDetail> queryWrapper = new QueryWrapper();
+        QueryWrapper<ReceiveAddressSendDetail> queryWrapper = new QueryWrapper();
     //        if(!StringUtils.isEmpty(dto.getKeyword())){
     //            queryWrapper.lambda()
-    //                    .like(EmailSendDetail::getAuther,dto.getKeyword())
-    //                    .like(EmailSendDetail::getContent,dto.getKeyword())
-    //                    .like(EmailSendDetail::getTitle,dto.getKeyword());
+    //                    .like(ReceiveAddressSendDetail::getAuther,dto.getKeyword())
+    //                    .like(ReceiveAddressSendDetail::getContent,dto.getKeyword())
+    //                    .like(ReceiveAddressSendDetail::getTitle,dto.getKeyword());
     //        }
-        IPage<EmailSendDetail> iPage = this.page(page, queryWrapper);
+        IPage<ReceiveAddressSendDetail> iPage = this.page(page, queryWrapper);
         return Result.ok(iPage);
     }
 
     @Override
-    public Result add(EmailSendDetail item, HttpSession session) throws Exception {
+    public Result add(ReceiveAddressSendDetail item, HttpSession session) throws Exception {
         item.setCreateTime(LocalDateTime.now());
         this.save(item);
         return Result.ok();
     }
 
     @Override
-    public Result edit(EmailSendDetail item, HttpSession session) throws Exception {
+    public Result edit(ReceiveAddressSendDetail item, HttpSession session) throws Exception {
         this.updateById(item);
        return Result.ok();
     }
@@ -69,7 +69,7 @@ public class EmailSendDetailServiceImpl extends ServiceImpl<EmailSendDetailMappe
 
     @Override
     public Result getDetail(Long id) throws Exception {
-    EmailSendDetail item = this.getOne(new QueryWrapper<EmailSendDetail>().lambda().eq(EmailSendDetail::getId,id));
+    ReceiveAddressSendDetail item = this.getOne(new QueryWrapper<ReceiveAddressSendDetail>().lambda().eq(ReceiveAddressSendDetail::getId,id));
          return Result.ok(item);
     }
 }

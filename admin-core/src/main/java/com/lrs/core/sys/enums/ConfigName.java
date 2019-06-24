@@ -6,6 +6,7 @@ package com.lrs.core.sys.enums;
 public enum ConfigName {
 
     SEND_EMAIL("send_email","发送邮件提醒间隔(单位：分钟)"),
+    SEND_MOBILE("send_mobile","发送手机报警间隔（单位：分钟）"),
     SEND_WARNING("send_warning","发送页面报警间隔（单位：分钟）"),
     ;
     private String key;

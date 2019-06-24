@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.github.qcloudsms.SmsMultiSenderResult;
 import com.lrs.common.constant.ApiResultEnum;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
@@ -13,30 +14,29 @@ import com.lrs.common.exception.ApiException;
 import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
 import com.lrs.core.monitor.cache.CacheKey;
-import com.lrs.core.monitor.entity.EmailSendDetail;
+import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
 import com.lrs.core.monitor.entity.Ping;
 import com.lrs.common.utils.date.DateUtil;
 import com.lrs.core.admin.entity.User;
 import com.lrs.core.aspect.IsTryAgain;
 import com.lrs.core.common.email.service.MailService;
-import com.lrs.core.monitor.entity.EmailAddress;
+import com.lrs.core.monitor.entity.ReceiveAddress;
 import com.lrs.core.monitor.entity.Server;
 import com.lrs.core.monitor.mapper.ServerMapper;
 import com.lrs.core.monitor.service.IEmailAddressService;
 import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.core.monitor.service.IServerService;
+import com.lrs.core.sms.SmsService;
 import com.lrs.core.sys.entity.Config;
 import com.lrs.core.sys.enums.ConfigName;
 import com.lrs.core.sys.enums.ConfigType;
 import com.lrs.core.sys.service.IConfigService;
-import com.sun.org.apache.xpath.internal.operations.Mod;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.thymeleaf.TemplateEngine;
@@ -95,6 +95,9 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
 
     @Autowired
     private IConfigService configService;
+
+    @Autowired
+    private SmsService smsService;
 
     private final static String refreshKey = "refresh";
     private final static  int timeOut = 5;;
@@ -320,7 +323,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
      * @throws Exception
      */
     @Transactional
-    @IsTryAgain
+//    @IsTryAgain
     public Server pingServer(Server server) throws Exception {
         server = serverService.getById(server.getId());
         boolean isUnline = false;
@@ -406,15 +409,50 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         StringBuilder sb = new StringBuilder();
         StringBuilder names = new StringBuilder();
         names.append(":");
+        ArrayList<String> params = new ArrayList<>();
         for(Server server:unLineList){
             sb.append(server.getIp()).append(",");
             names.append(server.getServerName()).append("、");
+            params.add(server.getServerName());
         }
         final String ips = sb.toString().substring(0,sb.toString().length() -1);
         final String serverNames = names.toString();
+        //发送短信
+        List<ReceiveAddress> mobileAddressList = emailAddressService.list(new LambdaQueryWrapper<ReceiveAddress>().eq(ReceiveAddress::getType,2));
+        ArrayList<String> mobileList = new ArrayList<>();
+        if(mobileAddressList != null && mobileAddressList.size() > 0) {
+            long time = 60;
+            try {
+                Config config = configService.getConfigByCache(ConfigType.TIME, ConfigName.SEND_MOBILE);
+                time = Long.valueOf(config.getConfigValue());
+            } catch (Exception e) {
+                log.error("获取发送短信时间配置出错", e);
+            }
+            for (ReceiveAddress mobile:mobileAddressList) {
+                String resultKey = redisKey + mobile.getToAddress();
+                String value = (String) redisTemplate.opsForValue().get(resultKey);
+                if (StringUtils.isEmpty(value)) {
+                    redisTemplate.opsForValue().set(resultKey, "1", time, TimeUnit.MINUTES);
+                    mobileList.add(mobile.getToAddress());
+                }
+            }
+        }
+        if(mobileList.size()>0){
+            try {
+                SmsMultiSenderResult smsMultiSenderResult = smsService.sendMultiSmsById(mobileList, params);
+                log.info("发送短信的结果={},参数=手机列表={},ips={}",smsMultiSenderResult,mobileList,params);
+                if(smsMultiSenderResult.result == 0){
+                    saveSendRecord(mobileList,ips);
+                }else{
+                    log.error("发送短信的错误结果={},参数=手机列表={},ips={}",smsMultiSenderResult,mobileList,params);
+                }
+            } catch (Exception e) {
+                log.error("发送短信失败",e);
+            }
+        }
 
         //发送邮件
-        List<EmailAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<EmailAddress>());
+        List<ReceiveAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<ReceiveAddress>().eq(ReceiveAddress::getType,1));
         if(emailAddressList != null && emailAddressList.size() > 0){
             long time = 60;
             try {
@@ -423,8 +461,8 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
             } catch (Exception e) {
                log.error("获取发送邮件时间配置出错",e);
             }
-            for (EmailAddress emailAddress:emailAddressList) {
-                String resultKey = redisKey + emailAddress.getToEmailAddress();
+            for (ReceiveAddress emailAddress:emailAddressList) {
+                String resultKey = redisKey + emailAddress.getToAddress();
                 String value = (String) redisTemplate.opsForValue().get(resultKey);
                 if (StringUtils.isEmpty(value)) {
                     //加入缓存,10 分钟期限
@@ -433,8 +471,8 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                         @Override
                         public void run() {
                             try {
-                                mailService.sendHtmlMail(from, emailAddress.getToEmailAddress(), "服务器检测掉线警告", emailContent);
-                                saveSendRecord(from, emailAddress.getToEmailAddress(),ips);
+                                mailService.sendHtmlMail(from, emailAddress.getToAddress(), "服务器检测掉线警告", emailContent);
+                                saveSendRecord(1,from, emailAddress.getToAddress(),ips);
                             } catch (Exception e) {
                                 redisTemplate.delete(resultKey);
                                 log.error(e.getMessage(),e);
@@ -448,13 +486,33 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     }
 
     //保存发送邮件记录
-    public void saveSendRecord(String from,String toAddress,String ips)throws Exception{
-        EmailSendDetail emailSendDetail = new EmailSendDetail();
-        emailSendDetail.setContent("服务器报警邮件")
+    public void saveSendRecord(int type,String from,String toAddress,String ips)throws Exception{
+        ReceiveAddressSendDetail receiveAddressSendDetail = new ReceiveAddressSendDetail();
+        receiveAddressSendDetail.setContent("服务器报警邮件")
+        .setType(type)
         .setIps(ips)
-        .setFromEmail(from)
-        .setToEmail(toAddress)
+        .setFromAddress(from)
+        .setToAddress(toAddress)
         .setCreateTime(LocalDateTime.now());
-        emailSendDetailService.save(emailSendDetail);
+        emailSendDetailService.save(receiveAddressSendDetail);
+    }
+
+    public void saveSendRecord(ArrayList<String> mobileList,String ips) throws Exception{
+        if(mobileList != null && mobileList.size()>0){
+            List<ReceiveAddressSendDetail> sendDetailList = new ArrayList<>();
+            for(String mobile:mobileList){
+                ReceiveAddressSendDetail receiveAddressSendDetail = new ReceiveAddressSendDetail();
+                receiveAddressSendDetail.setContent("服务器报警短信")
+                        .setType(1)
+                        .setIps(ips)
+                        .setFromAddress("")
+                        .setToAddress(mobile)
+                        .setCreateTime(LocalDateTime.now());
+                sendDetailList.add(receiveAddressSendDetail);
+            }
+            if(sendDetailList.size() > 0){
+                emailSendDetailService.saveBatch(sendDetailList,sendDetailList.size());
+            }
+        }
     }
 }

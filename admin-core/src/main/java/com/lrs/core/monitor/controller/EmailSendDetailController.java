@@ -1,7 +1,7 @@
 package com.lrs.core.monitor.controller;
 import com.lrs.common.annotation.Permission;
 import com.lrs.common.annotation.PermissionType;
-import com.lrs.core.monitor.entity.EmailSendDetail;
+import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
 import com.lrs.core.monitor.service.IEmailSendDetailService;
 import com.lrs.common.dto.PageDTO;
 import com.lrs.core.base.BaseController;
@@ -41,7 +41,7 @@ public class EmailSendDetailController extends BaseController {
     @PostMapping(value="/add")
     @ResponseBody
     @Permission(url = qxurl,type = PermissionType.ADD)
-    public Object add(EmailSendDetail item) throws Exception {
+    public Object add(ReceiveAddressSendDetail item) throws Exception {
         item.setId(null);
         return emailSendDetailService.add(item,this.getSession());
     }
@@ -49,7 +49,7 @@ public class EmailSendDetailController extends BaseController {
     @PostMapping(value="/edit")
     @ResponseBody
     @Permission(url = qxurl,type = PermissionType.EDIT)
-    public Object edit(EmailSendDetail item) throws Exception {
+    public Object edit(ReceiveAddressSendDetail item) throws Exception {
         return emailSendDetailService.edit(item,this.getSession());
     }
 

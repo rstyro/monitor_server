@@ -6,10 +6,21 @@
     </head>
     <body>
         <p>您好管理员,服务器IP：</p>
-        <ul th:each="item,mStat:${unLineList}">
-            <li><h3 th:text="${item.ip}">127.0.0.1</h3></li>
-        </ul>
-    <p>检测到服务掉线，请尽快处理</p>
+        <table>
+            <tr>
+                <th>服务器名称</th>
+                <th>IP地址</th>
+            </tr>
+            <tr th:each="item,mStat:${unLineList}">
+                <td>
+                    <h5 th:text="${item.serverName}">127.0.0.1</h5>
+                </td>
+                <td>
+                    <h5 th:text="${item.ip}">127.0.0.1</h5>
+                </td>
+            </tr>
+        </table>
+    <p>检测到服务掉线，请尽快查明原因尽快处理</p>
 
     </body>
 </html>

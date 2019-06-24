@@ -1,6 +1,6 @@
 package com.lrs.core.monitor.service;
 
-import com.lrs.core.monitor.entity.EmailAddress;
+import com.lrs.core.monitor.entity.ReceiveAddress;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
@@ -14,10 +14,10 @@ import javax.servlet.http.HttpSession;
  * @author rstyro
  * @since 2019-6-19
  */
-public interface IEmailAddressService extends IService<EmailAddress> {
+public interface IEmailAddressService extends IService<ReceiveAddress> {
     public Result getList(PageDTO dto) throws  Exception;
-    public Result add(EmailAddress item, HttpSession session) throws  Exception;
-    public Result edit(EmailAddress item, HttpSession session) throws  Exception;
+    public Result add(ReceiveAddress item, HttpSession session) throws  Exception;
+    public Result edit(ReceiveAddress item, HttpSession session) throws  Exception;
     public Result del(Long id, HttpSession session) throws  Exception;
     public Result getDetail(Long id) throws  Exception;
 }

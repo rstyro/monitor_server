@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
-import org.springframework.util.StringUtils;
+import com.lrs.core.monitor.entity.ReceiveAddress;
+
 import javax.servlet.http.HttpSession;
 
-import com.lrs.core.monitor.entity.EmailAddress;
 import com.lrs.core.monitor.mapper.EmailAddressMapper;
 import com.lrs.core.monitor.service.IEmailAddressService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -26,37 +26,37 @@ import java.time.LocalDateTime;
  * @since 2019-06-19
  */
 @Service
-public class EmailAddressServiceImpl extends ServiceImpl<EmailAddressMapper, EmailAddress> implements IEmailAddressService{
+public class EmailAddressServiceImpl extends ServiceImpl<EmailAddressMapper, ReceiveAddress> implements IEmailAddressService{
 
     @Override
     public Result getList(PageDTO dto) throws Exception {
-        IPage<EmailAddress> page = new Page<>();
+        IPage<ReceiveAddress> page = new Page<>();
         if(dto.getPageNo() != null){
             page.setCurrent(dto.getPageNo());
         }
         if(dto.getPageSize() != null){
             page.setSize(dto.getPageSize());
         }
-        QueryWrapper<EmailAddress> queryWrapper = new QueryWrapper();
+        QueryWrapper<ReceiveAddress> queryWrapper = new QueryWrapper();
     //        if(!StringUtils.isEmpty(dto.getKeyword())){
     //            queryWrapper.lambda()
-    //                    .like(EmailAddress::getAuther,dto.getKeyword())
-    //                    .like(EmailAddress::getContent,dto.getKeyword())
-    //                    .like(EmailAddress::getTitle,dto.getKeyword());
+    //                    .like(ReceiveAddress::getAuther,dto.getKeyword())
+    //                    .like(ReceiveAddress::getContent,dto.getKeyword())
+    //                    .like(ReceiveAddress::getTitle,dto.getKeyword());
     //        }
-        IPage<EmailAddress> iPage = this.page(page, queryWrapper);
+        IPage<ReceiveAddress> iPage = this.page(page, queryWrapper);
         return Result.ok(iPage);
     }
 
     @Override
-    public Result add(EmailAddress item, HttpSession session) throws Exception {
+    public Result add(ReceiveAddress item, HttpSession session) throws Exception {
         item.setCreateTime(LocalDateTime.now());
         this.save(item);
         return Result.ok();
     }
 
     @Override
-    public Result edit(EmailAddress item, HttpSession session) throws Exception {
+    public Result edit(ReceiveAddress item, HttpSession session) throws Exception {
         this.updateById(item);
        return Result.ok();
     }
@@ -69,7 +69,7 @@ public class EmailAddressServiceImpl extends ServiceImpl<EmailAddressMapper, Ema
 
     @Override
     public Result getDetail(Long id) throws Exception {
-    EmailAddress item = this.getOne(new QueryWrapper<EmailAddress>().lambda().eq(EmailAddress::getId,id));
+    ReceiveAddress item = this.getOne(new QueryWrapper<ReceiveAddress>().lambda().eq(ReceiveAddress::getId,id));
          return Result.ok(item);
     }
 }

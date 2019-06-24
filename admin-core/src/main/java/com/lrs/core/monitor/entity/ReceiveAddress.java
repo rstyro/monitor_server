@@ -1,9 +1,8 @@
 package com.lrs.core.monitor.entity;
 
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
+
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.annotation.TableField;
 import java.io.Serializable;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -23,19 +22,25 @@ import org.springframework.format.annotation.DateTimeFormat;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
-@TableName("monitor_email_address")
-public class EmailAddress implements Serializable {
+@TableName("monitor_receive_address")
+public class ReceiveAddress implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    /**
+     * 1 - 邮箱，2 -- 手机
+     */
+    private Integer type;
 
     @TableField("nickName")
     private String nickName;
 
     private String mark;
 
-    private String toEmailAddress;
+    private String toAddress;
 
     @TableLogic
     private Integer isDel;

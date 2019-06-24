@@ -1,6 +1,6 @@
 package com.lrs.core.monitor.mapper;
 
-import com.lrs.core.monitor.entity.EmailAddress;
+import com.lrs.core.monitor.entity.ReceiveAddress;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
@@ -11,6 +11,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @author rstyro
  * @since 2019-06-19
  */
-public interface EmailAddressMapper extends BaseMapper<EmailAddress> {
+public interface EmailAddressMapper extends BaseMapper<ReceiveAddress> {
 
 }
