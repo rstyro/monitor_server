@@ -7,12 +7,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.qcloudsms.SmsMultiSenderResult;
+import com.github.qcloudsms.SmsSingleSenderResult;
 import com.lrs.common.constant.ApiResultEnum;
 import com.lrs.common.constant.Result;
 import com.lrs.common.dto.PageDTO;
 import com.lrs.common.exception.ApiException;
 import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
+import com.lrs.common.utils.UnicodeUtils;
 import com.lrs.core.monitor.cache.CacheKey;
 import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
 import com.lrs.core.monitor.entity.Ping;
@@ -215,6 +217,9 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     //检测掉线列表状态是否恢复
     public void checkUnlineList(List<String> ips){
         List<Server> servers = getUnlineCache();
+        if(servers == null || servers.size() <1){
+            return;
+        }
         int count = 0;
         for(String ip:ips){
             for(Server server:servers){
@@ -309,11 +314,87 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         }
         if(unLineList.size() > 0){
             //发送邮件
-            sendEmail(unLineList);
+            sendEmailAndSMS(unLineList);
         }
         if(ips.size()>0){
             checkUnlineList(ips);
         }
+    }
+
+    @Override
+    public synchronized void sendMassage() throws Exception {
+        long emailTime = getConfigTime(ConfigName.SEND_EMAIL);
+        long mobileTime = getConfigTime(ConfigName.SEND_MOBILE);
+        String resultSMSKey = "send_adress_sms_";
+        String resultEmailKey = "send_adress_email_";
+        List<Server> sendSmsList = (List<Server>) redisTemplate.opsForValue().get(CacheKey.SEND_SMS_LIST);
+        List<Server> sendEmailList = (List<Server>) redisTemplate.opsForValue().get(CacheKey.SEND_EMAIL_LIST);
+        String ips = getIps(sendEmailList);
+        //发送短信或邮件提醒
+        List<ReceiveAddress> receiveAddressList = emailAddressService.list(new LambdaQueryWrapper<ReceiveAddress>());
+        if(receiveAddressList != null && receiveAddressList.size() > 0) {
+            //创建邮件正文
+            Context context = new Context();
+            context.setVariable("unLineList", sendEmailList);
+            String emailContent = templateEngine.process("model/emailTemplate", context);
+            String from = fromEmail;
+
+            for (ReceiveAddress receiveAddress:receiveAddressList) {
+                if(receiveAddress.getType().intValue() ==2 ){
+                    if(sendSmsList != null && sendSmsList.size()>0){
+                        for(Server server:sendSmsList){
+                            try {
+                                ArrayList<String> params = new ArrayList<>();
+                                params.add(server.getServerName());
+                                params.add(server.getIp().length()>12?server.getIp().substring(0,9)+"...":server.getIp());
+                                SmsSingleSenderResult smsSingleSenderResult = smsService.sendSmsById(receiveAddress.getToAddress(), params);
+                                log.info("发送短信的结果={},receiveAddress={},parames={},errMsg={}",smsSingleSenderResult,receiveAddress,params, UnicodeUtils.unicodeToCn(smsSingleSenderResult.errMsg));
+                                if(smsSingleSenderResult.result == 0){
+                                    saveSendRecord(2,"",receiveAddress.getToAddress(),server.getIp());
+                                    String redisKey = resultSMSKey+server.getIp();
+                                    redisTemplate.opsForValue().set(redisKey, "1", mobileTime, TimeUnit.MINUTES);
+                                }else{
+                                    log.info("发送短信的错误结果={},receiveAddress={},parames={}，errMsg={}",smsSingleSenderResult,receiveAddress,params,UnicodeUtils.unicodeToCn(smsSingleSenderResult.errMsg));
+                                }
+                            } catch (Exception e) {
+                                log.error("发送短信失败",e);
+                            }
+                        }
+                    }
+                }else{
+                    if(sendEmailList != null && sendEmailList.size()>0){
+                        try {
+                            Runnable sendEmailRunable = new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        mailService.sendHtmlMail(from, receiveAddress.getToAddress(), "服务器检测掉线警告", emailContent);
+                                        saveSendRecord(1,from, receiveAddress.getToAddress(),ips);
+                                    } catch (Exception e) {
+                                        log.error(e.getMessage(),e);
+                                    }
+                                }
+                            };
+                            threadPoolTaskExecutor.execute(sendEmailRunable);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+
+            //email放入缓存
+            if(sendEmailList != null && sendEmailList.size()>0){
+                for(Server server:sendEmailList){
+                    String redisKey = resultEmailKey+server.getIp();
+                    redisTemplate.opsForValue().set(redisKey, "1", emailTime, TimeUnit.MINUTES);
+                }
+            }
+            //发完就删除
+            redisTemplate.delete(CacheKey.SEND_EMAIL_LIST);
+            redisTemplate.delete(CacheKey.SEND_SMS_LIST);
+        }
+
     }
 
     /**
@@ -399,90 +480,56 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         return Result.ok(data);
     }
 
-    public void sendEmail(List<Server> unLineList) {
-        //创建邮件正文
-        String redisKey = "email_adress_";
-        Context context = new Context();
-        context.setVariable("unLineList", unLineList);
-        String emailContent = templateEngine.process("model/emailTemplate", context);
-        String from = fromEmail;
+    public String getIps(List<Server> unLineList){
         StringBuilder sb = new StringBuilder();
-        StringBuilder names = new StringBuilder();
-        names.append(":");
-        ArrayList<String> params = new ArrayList<>();
-        for(Server server:unLineList){
+        if(unLineList == null) return  "";
+        for(Server server:unLineList) {
             sb.append(server.getIp()).append(",");
-            names.append(server.getServerName()).append("、");
-            params.add(server.getServerName());
         }
-        final String ips = sb.toString().substring(0,sb.toString().length() -1);
-        final String serverNames = names.toString();
-        //发送短信
-        List<ReceiveAddress> mobileAddressList = emailAddressService.list(new LambdaQueryWrapper<ReceiveAddress>().eq(ReceiveAddress::getType,2));
-        ArrayList<String> mobileList = new ArrayList<>();
-        if(mobileAddressList != null && mobileAddressList.size() > 0) {
-            long time = 60;
-            try {
-                Config config = configService.getConfigByCache(ConfigType.TIME, ConfigName.SEND_MOBILE);
-                time = Long.valueOf(config.getConfigValue());
-            } catch (Exception e) {
-                log.error("获取发送短信时间配置出错", e);
-            }
-            for (ReceiveAddress mobile:mobileAddressList) {
-                String resultKey = redisKey + mobile.getToAddress();
-                String value = (String) redisTemplate.opsForValue().get(resultKey);
-                if (StringUtils.isEmpty(value)) {
-                    redisTemplate.opsForValue().set(resultKey, "1", time, TimeUnit.MINUTES);
-                    mobileList.add(mobile.getToAddress());
-                }
-            }
+        String ips = sb.toString();
+        if(!StringUtils.isEmpty(ips)){
+            ips = ips.substring(0,sb.toString().length() -1);
         }
-        if(mobileList.size()>0){
-            try {
-                SmsMultiSenderResult smsMultiSenderResult = smsService.sendMultiSmsById(mobileList, params);
-                log.info("发送短信的结果={},参数=手机列表={},ips={}",smsMultiSenderResult,mobileList,params);
-                if(smsMultiSenderResult.result == 0){
-                    saveSendRecord(mobileList,ips);
-                }else{
-                    log.error("发送短信的错误结果={},参数=手机列表={},ips={}",smsMultiSenderResult,mobileList,params);
-                }
-            } catch (Exception e) {
-                log.error("发送短信失败",e);
-            }
-        }
+        return ips;
+    }
 
-        //发送邮件
-        List<ReceiveAddress> emailAddressList = emailAddressService.list(new LambdaQueryWrapper<ReceiveAddress>().eq(ReceiveAddress::getType,1));
-        if(emailAddressList != null && emailAddressList.size() > 0){
-            long time = 60;
-            try {
-                Config config = configService.getConfigByCache(ConfigType.TIME, ConfigName.SEND_EMAIL);
-                time = Long.valueOf(config.getConfigValue());
-            } catch (Exception e) {
-               log.error("获取发送邮件时间配置出错",e);
+    public synchronized void sendEmailAndSMS(List<Server> unLineList) {
+        List<Server> sendSmsList = (List<Server>) redisTemplate.opsForValue().get(CacheKey.SEND_SMS_LIST);
+        List<Server> sendEmailList = (List<Server>) redisTemplate.opsForValue().get(CacheKey.SEND_EMAIL_LIST);
+        if(sendSmsList == null){
+            sendSmsList = new ArrayList<>();
+        }
+        if(sendEmailList == null){
+            sendEmailList = new ArrayList<>();
+        }
+        String resultSMSKey = "send_adress_sms_";
+        String resultEmailKey = "send_adress_email_";
+        for(Server server:unLineList){
+            resultSMSKey = resultSMSKey +server.getIp();
+            resultEmailKey = resultEmailKey +server.getIp();
+            String smsKeyValue = (String) redisTemplate.opsForValue().get(resultSMSKey);
+            String emailKeyValue = (String) redisTemplate.opsForValue().get(resultEmailKey);
+            //因为发邮件个发短信的事件间隔可能不一样，所以弄两个
+            if (StringUtils.isEmpty(smsKeyValue)) {
+                sendSmsList.add(server);
             }
-            for (ReceiveAddress emailAddress:emailAddressList) {
-                String resultKey = redisKey + emailAddress.getToAddress();
-                String value = (String) redisTemplate.opsForValue().get(resultKey);
-                if (StringUtils.isEmpty(value)) {
-                    //加入缓存,10 分钟期限
-                    redisTemplate.opsForValue().set(resultKey, "1", time, TimeUnit.MINUTES);
-                    Runnable sendEmailRunable = new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                mailService.sendHtmlMail(from, emailAddress.getToAddress(), "服务器检测掉线警告", emailContent);
-                                saveSendRecord(1,from, emailAddress.getToAddress(),ips);
-                            } catch (Exception e) {
-                                redisTemplate.delete(resultKey);
-                                log.error(e.getMessage(),e);
-                            }
-                        }
-                    };
-                    threadPoolTaskExecutor.execute(sendEmailRunable);
-                }
+            if(StringUtils.isEmpty(emailKeyValue)){
+                sendEmailList.add(server);
             }
         }
+        redisTemplate.opsForValue().set(CacheKey.SEND_EMAIL_LIST,sendEmailList);
+        redisTemplate.opsForValue().set(CacheKey.SEND_SMS_LIST,sendSmsList);
+    }
+
+    public long getConfigTime(ConfigName configName){
+        long time = 60;
+        try {
+            Config config = configService.getConfigByCache(ConfigType.TIME, configName);
+            time = Long.valueOf(config.getConfigValue());
+        } catch (Exception e) {
+            log.error("获取时间配置出错", e);
+        }
+        return time;
     }
 
     //保存发送邮件记录

@@ -109,4 +109,15 @@ public class MonitorTimer {
     }
 
 
+    @Scheduled(fixedDelay = 30*1000)
+    public void sendMessage(){
+        try {
+            log.info("===============检测是否需要发送消息："+ LocalDateTime.now());
+            serverService.sendMassage();
+        }catch (Exception e){
+            log.error(e.getMessage(),e);
+        }
+    }
+
+
 }

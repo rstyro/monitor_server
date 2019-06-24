@@ -8,6 +8,9 @@ public class CacheKey {
     public static final String SERVERIP_="serverip_";
     public static final String IS_OLD_OBJ_="is_old_obj_";
 
+    public static final String SEND_SMS_LIST="SEND_SMS_LIST";
+    public static final String SEND_EMAIL_LIST="SEND_EMAIL_LIST";
+
 
     public static final String MOD_LIST_="mod_list_";
     public static final String MOD_LIST_0="mod_list_0";
