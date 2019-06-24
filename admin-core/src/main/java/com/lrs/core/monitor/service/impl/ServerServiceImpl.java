@@ -287,6 +287,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
     }
 
     @Transactional
+    @IsTryAgain
     public void monitor(int resultModNumber) throws Exception {
 //        List<Server> serverList = this.list(new LambdaQueryWrapper<Server>().apply("MOD(id,{0})={1}",CacheKey.MOD_NUMBER,resultModNumber));
         List<Server> serverList = (List<Server>) redisTemplate.opsForValue().get(CacheKey.MOD_LIST_+resultModNumber);
@@ -404,7 +405,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
      * @throws Exception
      */
     @Transactional
-//    @IsTryAgain
+    @IsTryAgain
     public Server pingServer(Server server) throws Exception {
         server = serverService.getById(server.getId());
         boolean isUnline = false;

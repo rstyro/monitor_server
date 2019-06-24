@@ -8,6 +8,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -16,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Aspect
 @Configuration
-public class TryAgainAspect {
+public class TryAgainAspect implements Ordered {
 
 	/**
 	 * 默认重试几次
