@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.github.qcloudsms.SmsMultiSenderResult;
 import com.github.qcloudsms.SmsSingleSenderResult;
 import com.lrs.common.constant.ApiResultEnum;
 import com.lrs.common.constant.Result;
@@ -15,14 +14,14 @@ import com.lrs.common.exception.ApiException;
 import com.lrs.common.exception.TryAgainException;
 import com.lrs.common.utils.PathsUtils;
 import com.lrs.common.utils.UnicodeUtils;
-import com.lrs.core.monitor.cache.CacheKey;
-import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
-import com.lrs.core.monitor.entity.Ping;
 import com.lrs.common.utils.date.DateUtil;
 import com.lrs.core.admin.entity.User;
 import com.lrs.core.aspect.IsTryAgain;
 import com.lrs.core.common.email.service.MailService;
+import com.lrs.core.monitor.cache.CacheKey;
+import com.lrs.core.monitor.entity.Ping;
 import com.lrs.core.monitor.entity.ReceiveAddress;
+import com.lrs.core.monitor.entity.ReceiveAddressSendDetail;
 import com.lrs.core.monitor.entity.Server;
 import com.lrs.core.monitor.mapper.ServerMapper;
 import com.lrs.core.monitor.service.IEmailAddressService;
@@ -414,7 +413,6 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
         if(nextTimeMillis < System.currentTimeMillis()){
             log.info("=====ping_ip={}",server.getIp());
             Ping.savePingLogger(server.getIp(),"logs/monitor/"+ DateUtil.getDays()+"_"+server.getIp()+".log",server.getSendCount(),timeOut);
-            server.setLastSecond(nextTimeMillis);
             if(Ping.isUnline(server.getIp(), server.getLostCount(),server.getSendCount(),timeOut)){
                 log.info("=date={},ip={} is unline",LocalDateTime.now(),server.getIp());
                 server.setStatus(2);
@@ -423,6 +421,7 @@ public class ServerServiceImpl extends ServiceImpl<ServerMapper, Server> impleme
                 server.setStatus(1);
 
             }
+            server.setLastSecond(System.currentTimeMillis());
             server.setModifyTime(LocalDateTime.now());
             server.setLastPingTime(LocalDateTime.now());
             if(!serverService.updateById(server)){
