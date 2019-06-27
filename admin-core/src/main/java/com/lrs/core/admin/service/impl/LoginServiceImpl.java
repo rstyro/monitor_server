@@ -70,7 +70,7 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, Login> implements
         queryWrapper.lambda().eq(User::getUsername,dto.getUsername()).eq(User::getPassword,psw);
         User user = userService.getOne(queryWrapper);
         if(user == null){
-            throw  new ApiException(ApiResultEnum.ACCOUNT_NOT_FOUND);
+            throw  new ApiException(ApiResultEnum.ACCOUNT_PASSWARD_ERROR);
         }
         if("lock".equalsIgnoreCase(user.getStatus())){
             throw new ApiException(ApiResultEnum.ACCOUNT_LOCK);
